@@ -20,10 +20,13 @@ import array, time, sets
 import matplotlib.pyplot as plt
 import glob
 
+from astropy.table import Table
+
 co_filename = __file__
 co_path     = os.path.dirname(co_filename) + '/'
 
-def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False):
+def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
+                 silent=False, verbose=True):
     '''
     Function to get tagnames for table with emission-line fitting results
 
@@ -52,8 +55,16 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False):
 
     Notes
     -----
-    Created by Chun Ly, 8 February 2017
+    Created by Chun Ly, 9 February 2017
     '''
+
+    # Contains information about fitted emission lines
+    # Later + on 09/02/2017
+    line_fit_file = co_path + 'fit_lines.'+resol+'res.txt'
+    if silent == False: print '### Reading : ', line_fit_file
+    fit_data0 = asc.read(line_fit_file, format='commented_header')
+
+    if verbose == True: print fit_data0
 
     if DEEP2 == True:
         tagnames = ['OBJNO', 'SLIT', 'LINE', 'ZSPEC']
@@ -94,7 +105,8 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False):
     tagnames  = tagnames + wave_tags
     dtype     = dtype + w_dtype
 
-    return tagnames, dtype
+
+    return tagnames, dtype, fit_data0
 #enddef
 
 def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
@@ -161,14 +173,9 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
 
     n_spec = len(data0)
 
-    line_fit_file = co_path + 'fit_lines.'+resol+'res.txt'
-    if silent == False: print '### Reading : ', line_fit_file
-    fit_data0 = asc.read(line_fit_file, format='commented_header')
-
-    if verbose == True: print fit_data0
-
-    tagnames, dtype = get_tagnames(resol=resol, DEEP2=DEEP2, SDF=SDF,
-                                   weak=weak)
+    tagnames, dtype, \
+        fit_data0 = get_tagnames(resol=resol, DEEP2=DEEP2, SDF=SDF,
+                                 weak=weak, silent=silent, verbose=verbose)
 
     # Define columns of data and table
     arr0 = {}
@@ -180,7 +187,9 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
         if 'f' in dtype[tt] or 'e' in dtype[tt]:
             arr0[tagnames[tt]] = np.zeros(n_spec, dtype=np.float32)
 
-    emline_data = Table(arr0)
+    emline_data = Table(arr0, names=tagnames)
+
+    print emline_data
     
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
