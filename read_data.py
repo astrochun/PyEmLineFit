@@ -87,6 +87,7 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False):
     tagnames = tagnames + b_tags
     dtype    = dtype + b_dtype
 
+    # Add columns for spectral coverage min/max wavelength
     wave_tags = ['LMIN', 'LMAX', 'LMIN0', 'LMAX0']
     w_dtype   = ['f8', 'f8', 'f8', 'f8']
 
@@ -158,6 +159,8 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
 
     x0 = l0 + dl * np.arange(n_pix)
 
+    n_spec = len(data0)
+
     line_fit_file = co_path + 'fit_lines.'+resol+'res.txt'
     if silent == False: print '### Reading : ', line_fit_file
     fit_data0 = asc.read(line_fit_file, format='commented_header')
@@ -166,6 +169,18 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
 
     tagnames, dtype = get_tagnames(resol=resol, DEEP2=DEEP2, SDF=SDF,
                                    weak=weak)
+
+    # Define columns of data and table
+    arr0 = {}
+    for tt in range(len(tagnames)):
+        if dtype[tt] == 'i':
+            arr0[tagnames[tt]] = np.zeros(n_spec, dtype=np.int)
+        if 'S' in dtype[tt]:
+            arr0[tagnames[tt]] = np.repeat('N/A       ',n_spec)
+        if 'f' in dtype[tt] or 'e' in dtype[tt]:
+            arr0[tagnames[tt]] = np.zeros(n_spec, dtype=np.float32)
+
+    emline_data = Table(arr0)
     
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
