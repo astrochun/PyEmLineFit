@@ -105,12 +105,11 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
     tagnames  = tagnames + wave_tags
     dtype     = dtype + w_dtype
 
-
     return tagnames, dtype, fit_data0
 #enddef
 
-def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
-         SDF=True, weak=False, silent=False, verbose=True):
+def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
+         DEEP2=False, SDF=True, weak=False, silent=False, verbose=True):
 
     '''
     Main function for reading in data
@@ -118,7 +117,11 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
     Parameters
     ----------
     infile0 : string
-      Filename for FITS data that contains 1-D spectra
+      Filename for FITS 2-D image that contains 1-D spectra
+
+    cat_file : string
+      Filename for FITS binary table with individual entries corresponding
+      to each 1-D spectra in infile0
 
     zspec0 : list or numpy array
       Array of spectroscopic redshifts for each 1-D spectrum
@@ -152,12 +155,20 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
     Notes
     -----
     Created by Chun Ly, 8 February 2017
+    Modified by Chun Ly, 9 February 2017
+     - Add cat_file input
+     - Fill in [emline_data] for basic identification columns
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
 
     if silent == False: print '### Reading : ', infile0
     data0, hdr0 = fits.getdata(infile0, header=True)
+
+    # + on 09/02/2017
+    if silent == False: print '### Reading : ', cat_file
+    cat_data0, cat_hdr0 = fits.getdata(cat_file, header=True)
+    cat_data0 = Table(cat_data0)
 
     if zspec0 == None: zspec0 = np.zeros(len(data0))
 
@@ -189,8 +200,11 @@ def main(infile0, zspec0=None, OH_file=None, resol='low', DEEP2=False,
 
     emline_data = Table(arr0, names=tagnames)
 
-    print emline_data
-    
+    # + on 09/02/2017
+    init_tags = ['OBJNO', 'AP', 'SLIT', 'ZSPEC']
+    for tag in init_tags:
+        if tag in tagnames: emline_data[tag] = cat_data[tag]
+
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
 
