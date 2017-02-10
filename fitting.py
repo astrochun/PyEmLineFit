@@ -57,7 +57,27 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
-    
+
+    data0       = dict0['data0']
+    emline_data = dict0['emline_data']
+    fit_data0   = dict0['fit_data0']
+    x0          = dict0['x0']
+    zspec0      = emline_data['ZSPEC']
+
+    n_spec = len(data0)
+
+    for ll in xrange(n_spec):
+        y0 = data0[ll]
+
+        l_mark = np.where(y0 > 0)[0]
+        if ll == 0: print l_mark
+        if len(l_mark) > 0:
+            emline_data['LMIN'][ll]  = np.min(x0[l_mark])
+            emline_data['LMAX'][ll]  = np.max(x0[l_mark])
+            emline_data['LMIN0'][ll] = np.min(x0[l_mark])/(1.0+zspec0[ll])
+            emline_data['LMAX0'][ll] = np.max(x0[l_mark])/(1.0+zspec0[ll])
+
     if silent == False: print '### End fitting.main | '+systime()
+    return emline_data
 #enddef
 

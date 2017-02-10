@@ -22,6 +22,8 @@ import glob
 
 from astropy.table import Table
 
+import fitting
+
 co_filename = __file__
 co_path     = os.path.dirname(co_filename) + '/'
 
@@ -108,8 +110,9 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
     return tagnames, dtype, fit_data0
 #enddef
 
-def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
-         DEEP2=False, SDF=True, weak=False, silent=False, verbose=True):
+def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
+         out_pdf=None, DEEP2=False, SDF=True, weak=False, silent=False,
+         verbose=True):
 
     '''
     Main function for reading in data
@@ -119,7 +122,7 @@ def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
     infile0 : string
       Filename for FITS 2-D image that contains 1-D spectra
 
-    cat_file : string
+    cat_file0 : string
       Filename for FITS binary table with individual entries corresponding
       to each 1-D spectra in infile0
 
@@ -156,8 +159,9 @@ def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
     -----
     Created by Chun Ly, 8 February 2017
     Modified by Chun Ly, 9 February 2017
-     - Add cat_file input
+     - Add cat_file0 input
      - Fill in [emline_data] for basic identification columns
+     - Added out_pdf keyword option
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -166,11 +170,17 @@ def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
     data0, hdr0 = fits.getdata(infile0, header=True)
 
     # + on 09/02/2017
-    if silent == False: print '### Reading : ', cat_file
-    cat_data0, cat_hdr0 = fits.getdata(cat_file, header=True)
+    if silent == False: print '### Reading : ', cat_file0
+    cat_data0, cat_hdr0 = fits.getdata(cat_file0, header=True)
     cat_data0 = Table(cat_data0)
 
     if zspec0 == None: zspec0 = np.zeros(len(data0))
+
+    # + on 09/01/2017
+    if out_pdf == None:
+        str_in = '.fits.gz' if '.gz' in infile0 else '.fits'
+        out_pdf = infile0.replace(str_in,'.pdf')
+    if silent == False: print '### out_pdf : ', out_pdf
 
     l0    = hdr0['CRVAL1'] # Wavelength minimum
     dl    = hdr0['CDELT1'] # Wavelength dispersion
@@ -201,9 +211,15 @@ def main(infile0, cat_file, zspec0=None, OH_file=None, resol='low',
     emline_data = Table(arr0, names=tagnames)
 
     # + on 09/02/2017
-    init_tags = ['OBJNO', 'AP', 'SLIT', 'ZSPEC']
+    init_tags = ['OBJNO', 'AP', 'SLIT']
     for tag in init_tags:
-        if tag in tagnames: emline_data[tag] = cat_data[tag]
+        if tag in tagnames: emline_data[tag] = cat_data0[tag]
+
+    emline_data['ZSPEC'] = zspec0
+
+    dict0 = {'data0': data0, 'emline_data': emline_data,
+             'fit_data0': fit_data0, 'x0': x0}
+    emline_data = fitting.main(dict0, out_pdf, silent=silent, verbose=verbose)
 
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
