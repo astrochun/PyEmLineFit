@@ -73,12 +73,22 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     x0          = dict0['x0']
     zspec0      = emline_data['ZSPEC']
 
+    # Get OH skyline info | + on 10/02/2017
+    has_OH = 0
+    if 'OH_dict0' in dict0.keys():
+        OH_flag0 = dict0['OH_dict0']['OH_flag0']
+        OH_xmin0 = dict0['OH_dict0']['OH_xmin0']
+        OH_xmax0 = dict0['OH_dict0']['OH_xmax0']
+        has_OH = 1
+    else:
+        OH_flag0 = np.zeros(x0, dtype=np.int8)
+
     n_spec = len(data0)
 
     pp = PdfPages(out_pdf) # + on 10/02/2017
     nrows, ncols = 4, 2
 
-    for ll in xrange(n_spec):
+    for ll in xrange(10): #n_spec):
         if verbose == True:
             print '### Working on line=%04i zspec : %5.3f' % (ll, zspec0[ll])
 

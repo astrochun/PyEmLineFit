@@ -27,6 +27,51 @@ import fitting
 co_filename = __file__
 co_path     = os.path.dirname(co_filename) + '/'
 
+def OH_flag_arr(OH_file, x0, silent=False, verbose=False):
+    '''
+    Function to get information on OH night skylines
+
+    Parameters
+    ----------
+    OH_file : string
+      Filename containing wavelengths affected by OH night skylines
+
+    x0 : numpy array
+      Wavelength grid in Angstrom
+
+    Returns
+    -------
+    OH_dict0 : dict
+      Dictionary of arrays containing OH skyline info:
+        'OH_flag0' - Array containing 1 and 0. Same dimensions as [x0]
+        'OH_xmin0' - Array containing minimum wavelength for night skyline
+        'OH_xmax0' - Array containing maximum wavelength for night skyline
+
+    Notes
+    -----
+    Created by Chun Ly, 10 February 2017
+    '''
+
+    if silent == True: print '## Reading : ', OH_file
+    OH_data = asc.read(OH_file)
+
+    OH_xmin0 = OH_data['col1'].data.tolist()
+    OH_xmax0 = OH_data['col2'].data.tolist()
+
+    if silent == False:
+        print '## Adding in A- and B-band of atmospheric absorption'
+        OH_xmin0 += [7590.0, 6860.0]
+        OH_xmax0 += [7670.0, 6890.0]
+
+    OH_flag0 = np.zeros(len(x0), dtype=np.int8)
+    for oo in range(len(OH_xmin0)):
+        mark2 = np.where((x0 >= OH_xmin0[oo]) & (x0 <= OH_xmax0[oo]))[0]
+        if len(mark2) > 0: OH_flag[mark2] = 1
+
+    OH_dict0 = {'OH_flag0':OH_flag0, 'OH_xmin0':OH_xmin0, 'OH_xmax0':OH_xmax0}
+    return OH_dict0
+#enddef
+
 def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
                  silent=False, verbose=True):
     '''
@@ -164,6 +209,7 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
      - Added out_pdf keyword option
     Modified by Chun Ly, 10 February 2017
      - Add spec_file to dict0 for fitting.main()
+     - Add call to OH_flag_arr()
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -178,7 +224,7 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
 
     if zspec0 == None: zspec0 = np.zeros(len(data0))
 
-    # + on 09/01/2017
+    # + on 09/02/2017
     if out_pdf == None:
         str_in = '.fits.gz' if '.gz' in infile0 else '.fits'
         out_pdf = infile0.replace(str_in,'.pdf')
@@ -193,6 +239,9 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
         print '## Number of spectral pixels : ', n_pix
 
     x0 = l0 + dl * np.arange(n_pix)
+
+    # Get OH skyline information | + on 10/02/2017
+    if OH_file != None: OH_dict0 = OH_flag_arr(OH_file, x0)
 
     n_spec = len(data0)
 
@@ -221,6 +270,10 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
 
     dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
              'spec_file': os.path.basename(infile0), 'x0': x0}
+
+    # + on 10/02/2017
+    if OH_file != None: dict0['OH_dict0'] = OH_dict0
+
     emline_data = fitting.main(dict0, out_pdf, silent=silent, verbose=verbose)
 
     if silent == False: print '### End read_data.main | '+systime()
