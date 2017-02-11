@@ -72,8 +72,8 @@ def OH_flag_arr(OH_file, x0, silent=False, verbose=False):
     return OH_dict0
 #enddef
 
-def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
-                 silent=False, verbose=True):
+def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
+                 verbose=True):
     '''
     Function to get tagnames for table with emission-line fitting results
 
@@ -82,12 +82,6 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
     resol : string
       Spectral resolution of 1-D spectra. For low resolution, the
       [OII] doublet cannot be resolved. Default: 'low'
-
-    DEEP2 : bool
-      Indicate whether data is for DEEP2. Default: False
-
-    SDF : bool
-      Indicate whether data is for the SDF. Default: True
 
     weak : bool
       Indicate whether to fit weak nebular emission lines. Default: False
@@ -103,6 +97,8 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
     Notes
     -----
     Created by Chun Ly, 9 February 2017
+    Modified by Chun Ly, 11 February 2017
+     - Add init_dict0 to allow for user-defined arrays to pass forward
     '''
 
     # Contains information about fitted emission lines
@@ -113,12 +109,15 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
 
     if verbose == True: print fit_data0
 
-    if DEEP2 == True:
-        tagnames = ['OBJNO', 'SLIT', 'LINE', 'ZSPEC']
-        dtype    = ['i', 'S10', 'i', 'f8']
-    if SDF == True:
-        tagnames = ['AP', 'LINE', 'ZSPEC']
-        dtype    = ['S10', 'i', 'f8']
+    # Mod on 11/02/2107
+    tagnames = init_dict0.keys()[:-1]
+    dtype    = init_dict0['dtype']
+    #if DEEP2 == True:
+    #    tagnames = ['OBJNO', 'SLIT', 'LINE', 'ZSPEC']
+    #    dtype    = ['i', 'S10', 'i', 'f8']
+    #if SDF == True:
+    #    tagnames = ['AP', 'LINE', 'ZSPEC']
+    #    dtype    = ['S10', 'i', 'f8']
 
     cols    = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0',
                'FLUX', 'FLUX_ERR', 'FLUX_DATA', 'NOISE', 'SNR']
@@ -155,9 +154,8 @@ def get_tagnames(resol='low', DEEP2=False, SDF=True, weak=False,
     return tagnames, dtype, fit_data0
 #enddef
 
-def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
-         out_pdf=None, DEEP2=False, SDF=True, weak=False, silent=False,
-         verbose=True):
+def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
+         weak=False, silent=False, verbose=True):
 
     '''
     Main function for reading in data
@@ -167,13 +165,18 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
     infile0 : string
       Filename for FITS 2-D image that contains 1-D spectra
 
-    cat_file0 : string
-      Filename for FITS binary table with individual entries corresponding
-      to each 1-D spectra in infile0
-
-    zspec0 : list or numpy array
-      Array of spectroscopic redshifts for each 1-D spectrum
-      Default: np.array of zeros
+    init_dict0 : collections.OrderedDict()
+      Dictionary containing arrays to pass into emission-line table.
+      This can include a source name/ID, RA, Dec, etc. It must include
+      'ZSPEC', 'LINE' and 'dtype'. dtype must be placed at the end of
+      the OrderedDict(). It indicates what data format for each column
+      in the same order. Below is an example:
+        init_dict0 = collections.OrderedDict()
+        init_dict0['ID']    = ID
+        init_dict0['SLIT']  = slit
+        init_dict0['LINE']  = line
+        init_dict0['ZSPEC'] = zspec
+        init_dict0['dtype'] = dtype0
 
     OH_file : string
       Filename containing wavelengths affected by OH night skylines
@@ -181,12 +184,6 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
     resol : string
       Spectral resolution of 1-D spectra. For low resolution, the
       [OII] doublet cannot be resolved. Default: 'low'
-
-    DEEP2 : bool
-      Indicate whether data is for DEEP2. Default: False
-
-    SDF : bool
-      Indicate whether data is for the SDF. Default: True
 
     weak : bool
       Indicate whether to fit weak nebular emission lines. Default: False
@@ -210,6 +207,10 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
     Modified by Chun Ly, 10 February 2017
      - Add spec_file to dict0 for fitting.main()
      - Add call to OH_flag_arr()
+    Modified by Chun Ly, 10 February 2017
+     - Added init_dict0 input for user-defined arrays to pass to emission-line
+       table
+     - Delete DEEP2 and SDF keyword options
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -217,17 +218,16 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
     if silent == False: print '### Reading : ', infile0
     data0, hdr0 = fits.getdata(infile0, header=True)
 
-    # + on 09/02/2017
-    if silent == False: print '### Reading : ', cat_file0
-    cat_data0, cat_hdr0 = fits.getdata(cat_file0, header=True)
-    cat_data0 = Table(cat_data0)
-
-    if zspec0 == None: zspec0 = np.zeros(len(data0))
+    # Mod on 11/02/2017
+    if 'ZSPEC' not in init_dict0.keys():
+        zspec0 = np.zeros(len(data0))
+    else:
+        zspec0 = init_dict0['ZSPEC']
 
     # + on 09/02/2017
     if out_pdf == None:
-        str_in = '.fits.gz' if '.gz' in infile0 else '.fits'
-        out_pdf = infile0.replace(str_in,'.pdf')
+        str_in  = '.fits.gz' if '.gz' in infile0 else '.fits'
+        out_pdf = infile0.replace(str_in,'.ELF.pdf')
     if silent == False: print '### out_pdf : ', out_pdf
 
     l0    = hdr0['CRVAL1'] # Wavelength minimum
@@ -245,9 +245,10 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
 
     n_spec = len(data0)
 
+    # Mod on 11/02/2017
     tagnames, dtype, \
-        fit_data0 = get_tagnames(resol=resol, DEEP2=DEEP2, SDF=SDF,
-                                 weak=weak, silent=silent, verbose=verbose)
+        fit_data0 = get_tagnames(init_dict0, resol=resol, weak=weak,
+                                 silent=silent, verbose=verbose)
 
     # Define columns of data and table
     arr0 = {}
@@ -261,10 +262,10 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
 
     emline_data = Table(arr0, names=tagnames)
 
-    # + on 09/02/2017
-    init_tags = ['OBJNO', 'AP', 'SLIT']
+    # + on 09/02/2017. Mod on 11/02/2017
+    init_tags = init_dict0.keys()[:-1]
     for tag in init_tags:
-        if tag in tagnames: emline_data[tag] = cat_data0[tag]
+        if tag in tagnames: emline_data[tag] = init_dict0[tag]
 
     emline_data['ZSPEC'] = zspec0
 
