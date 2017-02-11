@@ -65,6 +65,8 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     Notes
     -----
     Created by Chun Ly, 10 February 2017
+    Modified by Chun Ly, 11 February 2017
+     - Minor bug in patches call with alpha and color
     '''
 
     OH_xmin0 = OH_dict0['OH_xmin0']
@@ -78,8 +80,9 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
             t_min = OH_xmin0[o_idx]
             dx    = t_max - t_min
             dy    = yra[1] - yra[0]
-            t_ax0.add_patch(patches.Rectangle((t_min, yra[0]), dx, dy),
-                            alpha=0.5, color='k')
+            # Minor bug fixed on 11/02/2017
+            t_ax0.add_patch(patches.Rectangle((t_min, yra[0]), dx, dy,
+                                              alpha=0.5, color='k'))
 #enddef
 
 def main(dict0, out_pdf, silent=False, verbose=True):
@@ -138,12 +141,13 @@ def main(dict0, out_pdf, silent=False, verbose=True):
 
     n_spec = len(data0)
 
+    if silent == False: print '### Output PDF file : ', out_pdf
     pp = PdfPages(out_pdf) # + on 10/02/2017
     nrows, ncols = 4, 2
 
     for ll in xrange(10): #n_spec):
         if verbose == True:
-            print '### Working on line=%04i zspec : %5.3f' % (ll, zspec0[ll])
+            print '### Working on line=%04i zspec : %.4f' % (ll, zspec0[ll])
 
         y0 = data0[ll]
 
