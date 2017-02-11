@@ -66,7 +66,7 @@ def OH_flag_arr(OH_file, x0, silent=False, verbose=False):
     OH_flag0 = np.zeros(len(x0), dtype=np.int8)
     for oo in range(len(OH_xmin0)):
         mark2 = np.where((x0 >= OH_xmin0[oo]) & (x0 <= OH_xmax0[oo]))[0]
-        if len(mark2) > 0: OH_flag[mark2] = 1
+        if len(mark2) > 0: OH_flag0[mark2] = 1
 
     OH_dict0 = {'OH_flag0':OH_flag0, 'OH_xmin0':OH_xmin0, 'OH_xmax0':OH_xmax0}
     return OH_dict0
@@ -167,10 +167,11 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
 
     init_dict0 : collections.OrderedDict()
       Dictionary containing arrays to pass into emission-line table.
-      This can include a source name/ID, RA, Dec, etc. It must include
-      'ZSPEC', 'LINE' and 'dtype'. dtype must be placed at the end of
-      the OrderedDict(). It indicates what data format for each column
-      in the same order. Below is an example:
+      This can include a source name/ID, RA, Dec, or other
+      identification (e.g., SLIT). It must include 'ZSPEC', 'LINE' and
+      'dtype'. dtype must be placed at the end of the OrderedDict().
+      It indicates what data format for each column in the same order.
+      Below is an example:
         init_dict0 = collections.OrderedDict()
         init_dict0['ID']    = ID
         init_dict0['SLIT']  = slit
@@ -207,22 +208,26 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     Modified by Chun Ly, 10 February 2017
      - Add spec_file to dict0 for fitting.main()
      - Add call to OH_flag_arr()
-    Modified by Chun Ly, 10 February 2017
-     - Added init_dict0 input for user-defined arrays to pass to emission-line
-       table
+    Modified by Chun Ly, 11 February 2017
+     - Added init_dict0 input for user-defined arrays to pass to
+       emission-line table
      - Delete DEEP2 and SDF keyword options
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
 
+    # + on 11/02/2017
+    if 'dtype' not in init_dict0.keys():
+        print '## dtype not provided in init_dict0!!!'
+        print '## Exiting!!!'
+        return
+
     if silent == False: print '### Reading : ', infile0
     data0, hdr0 = fits.getdata(infile0, header=True)
 
     # Mod on 11/02/2017
-    if 'ZSPEC' not in init_dict0.keys():
-        zspec0 = np.zeros(len(data0))
-    else:
-        zspec0 = init_dict0['ZSPEC']
+    zspec0 = np.zeros(len(data0)) if 'ZSPEC' not in \
+             init_dict0.keys() else init_dict0['ZSPEC']
 
     # + on 09/02/2017
     if out_pdf == None:
