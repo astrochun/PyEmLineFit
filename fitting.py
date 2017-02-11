@@ -25,6 +25,8 @@ import glob
 
 from astropy.table import Table
 
+from pylab import subplots_adjust # + on 10/02/2017
+
 from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
 def main(dict0, out_pdf, silent=False, verbose=True):
@@ -58,6 +60,8 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     Created by Chun Ly, 9 February 2017
     Modified by Chun Ly, 10 February 2017
      - Write PDF to out_pdf and show panels for each emission line
+     - Adjust plotting to include label on top, draw emission lines,
+       draw zero
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -65,12 +69,14 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     data0       = dict0['data0']
     emline_data = dict0['emline_data']
     fit_data0   = dict0['fit_data0']
+    spec_file   = dict0['spec_file'] # + on 10/02/2017
     x0          = dict0['x0']
     zspec0      = emline_data['ZSPEC']
 
     n_spec = len(data0)
 
     pp = PdfPages(out_pdf) # + on 10/02/2017
+    nrows, ncols = 4, 2
 
     for ll in xrange(n_spec):
         if verbose == True:
@@ -109,22 +115,49 @@ def main(dict0, out_pdf, silent=False, verbose=True):
         if len(in_spec) == 0:
             print '### No lines available'
         else:
-            fig0, ax_arr = plt.subplots(nrows=4, ncols=2)
+            fig0, ax_arr = plt.subplots(nrows=nrows, ncols=ncols)
+
+            # + on 10/02/2017
+            label0  = '%s SLIT=%s line=%04i' % (spec_file,emline_data['SLIT'][ll],ll)
+            label0 += ' z=%6.4f %.1f-%.1f' % (zspec0[ll], lmin, lmax)
+            ax_arr[0,0].set_title(label0, loc=u'left', fontsize=14)
+
             for ss in xrange(len(in_spec)):
                 panel_check = 1 if ss == 0 else 0
                 if ss != 0:
                     panel_check = fit_data0['panels'][in_spec[ss]] - \
                                   fit_data0['panels'][in_spec[ss-1]]
 
-                t_col = fit_data0['panels'][in_spec[ss]] % 2
-                t_row = fit_data0['panels'][in_spec[ss]] / 2
-                if panel_check:
-                    t_ax0 = ax_arr[t_row,t_col]
-                    t_ax0.plot(x0,y0)
+                t_col = fit_data0['panels'][in_spec[ss]] % ncols
+                t_row = fit_data0['panels'][in_spec[ss]] / ncols
+                t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
+
+                # Mod on 10/02/2017
+                if panel_check: #Do this once for each panel
+                    t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
                     xra = [x_min[in_spec[ss]],
                            x_min[in_spec[ss]]+2*xwidth[in_spec[ss]]]
                     t_ax0.set_xlim(xra)
+                    t_ax0.yaxis.set_ticklabels([])
+                    t_ax0.tick_params(axis='both', which='major', labelsize=10)
+                    t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
+
+                # Draw vertical lines for axes | + on 10/02/2017
+                t_ax0.axvline(x=z_lines[in_spec[ss]], linewidth=1, color='b',
+                              zorder=1)
             #endfor
+
+            # Remove plotting of non-use panels | + on 10/02/2017
+            max_panel = np.max(fit_data0['panels'][in_spec])
+            for no_spec in range(max_panel+1, nrows*ncols):
+                t_col = no_spec % ncols
+                t_row = no_spec / ncols
+                ax_arr[t_row,t_col].axis('off')
+
+            # + on 10/02/2017
+            subplots_adjust(left=0.025, bottom=0.025, top=0.975, right=0.975,
+                            wspace=0.05, hspace=0.10)
+            fig0.set_size_inches(8, 11)
             fig0.savefig(pp, format='pdf')
     #endfor
 

@@ -162,6 +162,8 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
      - Add cat_file0 input
      - Fill in [emline_data] for basic identification columns
      - Added out_pdf keyword option
+    Modified by Chun Ly, 10 February 2017
+     - Add spec_file to dict0 for fitting.main()
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -217,8 +219,8 @@ def main(infile0, cat_file0, zspec0=None, OH_file=None, resol='low',
 
     emline_data['ZSPEC'] = zspec0
 
-    dict0 = {'data0': data0, 'emline_data': emline_data,
-             'fit_data0': fit_data0, 'x0': x0}
+    dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
+             'spec_file': os.path.basename(infile0), 'x0': x0}
     emline_data = fitting.main(dict0, out_pdf, silent=silent, verbose=verbose)
 
     if silent == False: print '### End read_data.main | '+systime()
