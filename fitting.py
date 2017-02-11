@@ -21,6 +21,8 @@ import numpy as np
 import array, time, sets
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches # + on 10/02/2017
+
 import glob
 
 from astropy.table import Table
@@ -29,8 +31,58 @@ from pylab import subplots_adjust # + on 10/02/2017
 
 from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
-def main(dict0, out_pdf, silent=False, verbose=True):
+def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
+    '''
+    Shade wavelengths affected by OH night skylines
 
+    Parameters
+    ----------
+    OH_dict0 : dict
+      Dictionary containing:
+        'data0' : Array of 1-D spectra
+        'emline_data' : Emission-line fitting results astropy table
+        'fit_data0' : astropy table containing emission lines to be fitted
+        'x0' : numpy array of wavelength in Angstrom
+
+    t_ax0 : matplotlib.axes
+      Plotting axes from plt.subplots
+
+    xra : array or list
+      Limit of x-axis for plotting
+
+    yra : array or list
+      Limit of y-axis for plotting
+
+    silent : boolean
+      Turns off stdout messages. Default: True
+
+    verbose : boolean
+      Turns on additional stdout messages. Default: False
+
+    Returns
+    -------
+
+    Notes
+    -----
+    Created by Chun Ly, 10 February 2017
+    '''
+
+    OH_xmin0 = OH_dict0['OH_xmin0']
+    OH_xmax0 = OH_dict0['OH_xmax0']
+
+    OH_in_reg = np.where((OH_xmin0 > xra[0]) & (OH_xmin0 < xra[1]))[0]
+    if len(OH_in_reg) > 0:
+        for oo in xrange(len(OH_in_reg)):
+            o_idx = OH_in_reg[oo]
+            t_max = np.min([OH_xmax0[o_idx], xra[1]])
+            t_min = OH_xmin0[o_idx]
+            dx    = t_max - t_min
+            dy    = yra[1] - yra[0]
+            t_ax0.add_patch(patches.Rectangle((t_min, yra[0]), dx, dy),
+                            alpha=0.5, color='k')
+#enddef
+
+def main(dict0, out_pdf, silent=False, verbose=True):
     '''
     Provide explanation for function here.
 
@@ -43,8 +95,8 @@ def main(dict0, out_pdf, silent=False, verbose=True):
         'fit_data0' : astropy table containing emission lines to be fitted
         'x0' : numpy array of wavelength in Angstrom
 
-    dict0 : dictionary
-      Dictionary containing:
+    out_pdf : string
+      Filename for output PDF file
 
     silent : boolean
       Turns off stdout messages. Default: False
@@ -62,6 +114,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
      - Write PDF to out_pdf and show panels for each emission line
      - Adjust plotting to include label on top, draw emission lines,
        draw zero
+     - Add call to draw_OH()
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -147,7 +200,8 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                     xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
 
                 in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
-                in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0] # Need to do OH_flag
+                in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
+                                     (OH_flag0 == 0))[0]
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -161,6 +215,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                     t_ax0.yaxis.set_ticklabels([])
                     t_ax0.tick_params(axis='both', which='major', labelsize=10)
                     t_ax0.minorticks_on()
+
+                    # Draw OH skyline | + on 10/02/2017
+                    if has_OH: draw_OH(dict0['OH_dict0'], t_ax0, xra, yra)
 
                     # Draw horizontal line at y=0
                     t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
@@ -182,6 +239,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                             wspace=0.05, hspace=0.10)
             fig0.set_size_inches(8, 11)
             fig0.savefig(pp, format='pdf')
+        #endelse
     #endfor
 
     pp.close()
