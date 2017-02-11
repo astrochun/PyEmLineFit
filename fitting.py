@@ -123,27 +123,40 @@ def main(dict0, out_pdf, silent=False, verbose=True):
             ax_arr[0,0].set_title(label0, loc=u'left', fontsize=14)
 
             for ss in xrange(len(in_spec)):
+                s_idx = in_spec[ss] # + on 10/02/2017
                 panel_check = 1 if ss == 0 else 0
                 if ss != 0:
-                    panel_check = fit_data0['panels'][in_spec[ss]] - \
+                    panel_check = fit_data0['panels'][s_idx] - \
                                   fit_data0['panels'][in_spec[ss-1]]
 
-                t_col = fit_data0['panels'][in_spec[ss]] % ncols
-                t_row = fit_data0['panels'][in_spec[ss]] / ncols
+                t_col = fit_data0['panels'][s_idx] % ncols
+                t_row = fit_data0['panels'][s_idx] / ncols
+
                 t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
+                if panel_check:
+                    xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
+
+                in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
+                in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0] # Need to do OH_flag
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
                     t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
-                    xra = [x_min[in_spec[ss]],
-                           x_min[in_spec[ss]]+2*xwidth[in_spec[ss]]]
                     t_ax0.set_xlim(xra)
+
+                    # Adjust y-range
+                    t1  = np.min(y0[in_range2])
+                    yra = [1.1*t1 if t1 < 0 else 0.0, 1.1*np.max(y0[in_range2])]
+                    t_ax0.set_ylim(yra)
                     t_ax0.yaxis.set_ticklabels([])
                     t_ax0.tick_params(axis='both', which='major', labelsize=10)
+                    t_ax0.minorticks_on()
+
+                    # Draw horizontal line at y=0
                     t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
 
                 # Draw vertical lines for axes | + on 10/02/2017
-                t_ax0.axvline(x=z_lines[in_spec[ss]], linewidth=1, color='b',
+                t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
                               zorder=1)
             #endfor
 
