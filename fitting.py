@@ -123,6 +123,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     Modified by Chun Ly, 12 February 2017
      - Handle different input types ('SLIT', 'AP') for title labeling
      - Annotate emission lines for each panel in the upper right
+     - Define [no_spec] to properly handle not plotting certain subplots panel
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -152,7 +153,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     pp = PdfPages(out_pdf) # + on 10/02/2017
     nrows, ncols = 4, 2
 
-    for ll in xrange(n_line):
+    for ll in xrange(10): #n_line):
         if verbose == True:
             print '### Working on line=%04i zspec : %.4f' % (line[ll],
                                                              zspec0[ll])
@@ -186,6 +187,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
 
         in_spec = np.where((z_lines >= lmin) & (z_lines <= lmax))[0]
 
+        # Emission lines not in spectral coverage | + on 12/02/2017
+        no_spec = np.where((z_lines < lmin) | (z_lines > lmax))[0]
+
         # + on 10/02/2017
         if len(in_spec) == 0:
             print '### No lines available'
@@ -210,8 +214,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                 if ss != 0:
                     panel_check = ss_panel - fit_data0['panels'][in_spec[ss-1]]
 
-                t_col = ss_panel % ncols
-                t_row = ss_panel / ncols
+                t_col, t_row = ss_panel % ncols, ss_panel / ncols
 
                 t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
                 if panel_check:
@@ -255,11 +258,11 @@ def main(dict0, out_pdf, silent=False, verbose=True):
             #endfor
 
             # Remove plotting of non-use panels | + on 10/02/2017
-            max_panel = np.max(fit_data0['panels'][in_spec])
-            for no_spec in range(max_panel+1, nrows*ncols):
-                t_col = no_spec % ncols
-                t_row = no_spec / ncols
-                ax_arr[t_row,t_col].axis('off')
+            if len(no_spec) > 0:
+                no_panel = list(set(fit_data0['panels'][no_spec])) # Remove duplicates
+                for npl in no_panel:
+                    t_col, t_row = npl % ncols, npl / ncols
+                    ax_arr[t_row,t_col].axis('off')
 
             # + on 10/02/2017
             subplots_adjust(left=0.025, bottom=0.025, top=0.975, right=0.975,
