@@ -170,11 +170,15 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
       This can include a source name/ID, RA, Dec, or other
       identification (e.g., SLIT). It must include 'ZSPEC', and
       'dtype'. dtype indicates what data format for each column in the
-      same order.
+      same order to initialize the values for the final emission-line
+      table.
         - ZSPEC must be provided at high precision, to four decimal places
           to avoid fitting nearby OH skylines. This code uses the zspec
-          as the only prior
+          as a prior. If not provided, it is assumed that the spectra
+          have been shifted to the rest-frame and all zspec values will be
+          ZERO.
         - dtype must be placed at the *beginning* of the OrderedDict().
+        - dtype must be a list for concatenation purposes
         - 'LINE' is an index array providing which spectra to perform the
           fitting. The indexing should begin from 1 (for the first spectra)
           and continue on. If it is not provided, it will assume that all
@@ -183,8 +187,9 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
           this can be different from the size of the FITS 2-D image (infile0)
       Below is an example:
         init_dict0 = collections.OrderedDict()
+        dtype = ['i', 'S8', 'i', 'f8']
+        init_dict0['dtype'] = dtype
         init_dict0['ID']    = ID
-        init_dict0['dtype'] = dtype0
         init_dict0['SLIT']  = slit
         init_dict0['LINE']  = line
         init_dict0['ZSPEC'] = zspec
@@ -222,6 +227,9 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
      - Added init_dict0 input for user-defined arrays to pass to
        emission-line table
      - Delete DEEP2 and SDF keyword options
+    Modified by Chun Ly, 12 February 2017
+     - Handle case when 'LINE' is not provided in init_dict0
+     - Handle case when 'ZSPEC' is not provided in init_dict0 -- Assume rest-frame
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -235,14 +243,17 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     if silent == False: print '### Reading : ', infile0
     data0, hdr0 = fits.getdata(infile0, header=True)
 
-    # + on 11/02/2017
+    # + on 12/02/2017
     if 'LINE' not in init_dict0.keys():
-        init_dict0['LINE'] = 1+np.arange(len(data0))
+        if silent == False: print '### Adding default LINE index'
+        init_dict0['LINE']  = 1+np.arange(len(data0))
+        init_dict0['dtype'] = init_dict0['dtype'] + ['i']
+        print init_dict0.keys()
     line = init_dict0['LINE']
 
-    # Mod on 11/02/2017
-    zspec0 = np.zeros(len(data0)) if 'ZSPEC' not in \
-             init_dict0.keys() else init_dict0['ZSPEC']
+    # Mod on 12/02/2017
+    if 'ZSPEC' not in init_dict0.keys():
+        init_dict0['ZSPEC'] = np.zeros(len(line))
 
     # + on 09/02/2017
     if out_pdf == None:
@@ -285,10 +296,8 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     # + on 09/02/2017. Mod on 11/02/2017
     init_tags = init_dict0.keys()[1:]
     for tag in init_tags:
-        print '### Filling in : ', tag
+        if silent == False: print '### Filling in : ', tag
         if tag in tagnames: emline_data[tag] = init_dict0[tag]
-
-    #emline_data['ZSPEC'] = zspec0
 
     dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
              'spec_file': os.path.basename(infile0), 'x0': x0}
