@@ -82,7 +82,8 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
             dy    = yra[1] - yra[0]
             # Minor bug fixed on 11/02/2017
             t_ax0.add_patch(patches.Rectangle((t_min, yra[0]), dx, dy,
-                                              alpha=0.5, color='k'))
+                                              alpha=0.5, facecolor='k',
+                                              edgecolor='none'))
 #enddef
 
 def main(dict0, out_pdf, silent=False, verbose=True):
@@ -118,6 +119,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
      - Adjust plotting to include label on top, draw emission lines,
        draw zero
      - Add call to draw_OH()
+     - Added use of [line] for indexing of 1-D spectra to fit
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -128,6 +130,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     spec_file   = dict0['spec_file'] # + on 10/02/2017
     x0          = dict0['x0']
     zspec0      = emline_data['ZSPEC']
+    line        = emline_data['LINE'] # + on 11/02/2017
 
     # Get OH skyline info | + on 10/02/2017
     has_OH = 0
@@ -140,16 +143,18 @@ def main(dict0, out_pdf, silent=False, verbose=True):
         OH_flag0 = np.zeros(x0, dtype=np.int8)
 
     n_spec = len(data0)
+    n_line = len(line) # + on 11/02/2017
 
     if silent == False: print '### Output PDF file : ', out_pdf
     pp = PdfPages(out_pdf) # + on 10/02/2017
     nrows, ncols = 4, 2
 
-    for ll in xrange(10): #n_spec):
+    for ll in xrange(n_line):
         if verbose == True:
-            print '### Working on line=%04i zspec : %.4f' % (ll, zspec0[ll])
+            print '### Working on line=%04i zspec : %.4f' % (line[ll],
+                                                             zspec0[ll])
 
-        y0 = data0[ll]
+        y0 = data0[line[ll]-1]
 
         # Fill in LMIN/LMAX values, range of spectrum
         l_mark = np.where(y0 > 0)[0]
@@ -185,7 +190,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
             fig0, ax_arr = plt.subplots(nrows=nrows, ncols=ncols)
 
             # + on 10/02/2017
-            label0  = '%s SLIT=%s line=%04i' % (spec_file,emline_data['SLIT'][ll],ll)
+            label0  = '%s SLIT=%s line=%04i' % (spec_file,emline_data['SLIT'][ll], line[ll])
             label0 += ' z=%6.4f %.1f-%.1f' % (zspec0[ll], lmin, lmax)
             ax_arr[0,0].set_title(label0, loc=u'left', fontsize=14)
 

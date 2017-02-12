@@ -109,8 +109,8 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
 
     if verbose == True: print fit_data0
 
-    # Mod on 11/02/2107
-    tagnames = init_dict0.keys()[:-1]
+    # Mod on 11/02/2107. Switched to dtype as first dict key
+    tagnames = init_dict0.keys()[1:]
     dtype    = init_dict0['dtype']
     #if DEEP2 == True:
     #    tagnames = ['OBJNO', 'SLIT', 'LINE', 'ZSPEC']
@@ -168,16 +168,26 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     init_dict0 : collections.OrderedDict()
       Dictionary containing arrays to pass into emission-line table.
       This can include a source name/ID, RA, Dec, or other
-      identification (e.g., SLIT). It must include 'ZSPEC', 'LINE' and
-      'dtype'. dtype must be placed at the end of the OrderedDict().
-      It indicates what data format for each column in the same order.
+      identification (e.g., SLIT). It must include 'ZSPEC', and
+      'dtype'. dtype indicates what data format for each column in the
+      same order.
+        - ZSPEC must be provided at high precision, to four decimal places
+          to avoid fitting nearby OH skylines. This code uses the zspec
+          as the only prior
+        - dtype must be placed at the *beginning* of the OrderedDict().
+        - 'LINE' is an index array providing which spectra to perform the
+          fitting. The indexing should begin from 1 (for the first spectra)
+          and continue on. If it is not provided, it will assume that all
+          spectra will be fitted.
+        - Note that the input arrays must have the same dimensions. However,
+          this can be different from the size of the FITS 2-D image (infile0)
       Below is an example:
         init_dict0 = collections.OrderedDict()
         init_dict0['ID']    = ID
+        init_dict0['dtype'] = dtype0
         init_dict0['SLIT']  = slit
         init_dict0['LINE']  = line
         init_dict0['ZSPEC'] = zspec
-        init_dict0['dtype'] = dtype0
 
     OH_file : string
       Filename containing wavelengths affected by OH night skylines
@@ -225,6 +235,11 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     if silent == False: print '### Reading : ', infile0
     data0, hdr0 = fits.getdata(infile0, header=True)
 
+    # + on 11/02/2017
+    if 'LINE' not in init_dict0.keys():
+        init_dict0['LINE'] = 1+np.arange(len(data0))
+    line = init_dict0['LINE']
+
     # Mod on 11/02/2017
     zspec0 = np.zeros(len(data0)) if 'ZSPEC' not in \
              init_dict0.keys() else init_dict0['ZSPEC']
@@ -248,7 +263,7 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     # Get OH skyline information | + on 10/02/2017
     if OH_file != None: OH_dict0 = OH_flag_arr(OH_file, x0)
 
-    n_spec = len(data0)
+    n_line = len(line) #len(data0)
 
     # Mod on 11/02/2017
     tagnames, dtype, \
@@ -259,20 +274,21 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     arr0 = {}
     for tt in range(len(tagnames)):
         if dtype[tt] == 'i':
-            arr0[tagnames[tt]] = np.zeros(n_spec, dtype=np.int)
+            arr0[tagnames[tt]] = np.zeros(n_line, dtype=np.int)
         if 'S' in dtype[tt]:
-            arr0[tagnames[tt]] = np.repeat('N/A       ',n_spec)
+            arr0[tagnames[tt]] = np.repeat('N/A       ',n_line)
         if 'f' in dtype[tt] or 'e' in dtype[tt]:
-            arr0[tagnames[tt]] = np.zeros(n_spec, dtype=np.float32)
+            arr0[tagnames[tt]] = np.zeros(n_line, dtype=np.float32)
 
     emline_data = Table(arr0, names=tagnames)
 
     # + on 09/02/2017. Mod on 11/02/2017
-    init_tags = init_dict0.keys()[:-1]
+    init_tags = init_dict0.keys()[1:]
     for tag in init_tags:
+        print '### Filling in : ', tag
         if tag in tagnames: emline_data[tag] = init_dict0[tag]
 
-    emline_data['ZSPEC'] = zspec0
+    #emline_data['ZSPEC'] = zspec0
 
     dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
              'spec_file': os.path.basename(infile0), 'x0': x0}
