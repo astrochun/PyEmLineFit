@@ -120,6 +120,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
        draw zero
      - Add call to draw_OH()
      - Added use of [line] for indexing of 1-D spectra to fit
+    Modified by Chun Ly, 12 February 2017
+     - Handle different input types ('SLIT', 'AP') for title labeling
+     - Annotate emission lines for each panel in the upper right
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -189,20 +192,26 @@ def main(dict0, out_pdf, silent=False, verbose=True):
         else:
             fig0, ax_arr = plt.subplots(nrows=nrows, ncols=ncols)
 
-            # + on 10/02/2017
-            label0  = '%s SLIT=%s line=%04i' % (spec_file,emline_data['SLIT'][ll], line[ll])
+            # + on 10/02/2017, Mod on 12/02/2017
+            label0 = spec_file
+            if 'SLIT' in emline_data.colnames:
+                label0 += ' SLIT=%s' % emline_data['SLIT'][ll]
+            if 'AP' in emline_data.colnames:
+                label0 += ' AP=%s' % emline_data['AP'][ll]
+            label0 += ' line=%04i' % line[ll]
             label0 += ' z=%6.4f %.1f-%.1f' % (zspec0[ll], lmin, lmax)
             ax_arr[0,0].set_title(label0, loc=u'left', fontsize=14)
 
             for ss in xrange(len(in_spec)):
                 s_idx = in_spec[ss] # + on 10/02/2017
                 panel_check = 1 if ss == 0 else 0
-                if ss != 0:
-                    panel_check = fit_data0['panels'][s_idx] - \
-                                  fit_data0['panels'][in_spec[ss-1]]
 
-                t_col = fit_data0['panels'][s_idx] % ncols
-                t_row = fit_data0['panels'][s_idx] / ncols
+                ss_panel = fit_data0['panels'][s_idx] # + on 12/02/2017
+                if ss != 0:
+                    panel_check = ss_panel - fit_data0['panels'][in_spec[ss-1]]
+
+                t_col = ss_panel % ncols
+                t_row = ss_panel / ncols
 
                 t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
                 if panel_check:
@@ -230,6 +239,15 @@ def main(dict0, out_pdf, silent=False, verbose=True):
 
                     # Draw horizontal line at y=0
                     t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
+
+                    # Annotate emission lines in the upper right panel | + on 12/02/2017
+                    in_panel = np.where(fit_data0['panels'][in_spec] == ss_panel)[0]
+                    in_panel = in_spec[in_panel]
+                    line_annot = '\n'.join([a for a in fit_data0['lines_greek'][in_panel]])
+                    bbox_props = dict(boxstyle="square,pad=0.3", fc="white", alpha=0.9,
+                                      ec="none")
+                    t_ax0.annotate(line_annot, (0.95,0.95), xycoords='axes fraction',
+                                   ha='right', va='top', bbox=bbox_props, zorder=6)
 
                 # Draw vertical lines for axes | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
