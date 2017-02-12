@@ -46,6 +46,8 @@ def deep2(silent=False, verbose=True):
     Notes
     -----
     Created by Chun Ly, 11 February 2017
+    Modified by Chun Ly, 12 February 2017
+     - Change order of init_dict0 so dtype is first, following format
     '''
     
     if silent == False: print '### Begin execute.deep2 | '+systime()
@@ -70,11 +72,11 @@ def deep2(silent=False, verbose=True):
 
         dtype0 = ['i', 'S8', 'i', 'f8']
         init_dict0 = collections.OrderedDict()
+        init_dict0['dtype'] = dtype0
         init_dict0['OBJNO'] = objno
         init_dict0['SLIT']  = slit
         init_dict0['LINE']  = line
         init_dict0['ZSPEC'] = zspec
-        init_dict0['dtype'] = dtype0
         
         read_data.main(infiles[ff], init_dict0, OH_file=OH_files[ff],
                        resol='high', out_pdf=pdf_files[ff])
