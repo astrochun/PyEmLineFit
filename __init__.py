@@ -14,4 +14,8 @@ import read_data
 import fitting
 import execute
 
+reload(read_data)
+reload(fitting)
+reload(execute)
+
 #__all__ = ['read_data']
