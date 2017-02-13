@@ -1,9 +1,9 @@
 #lines0  lines_txt   lines_greek	  panels xwidth0 x_min0  Balmer_flag
 3727.00  OII_3727    [OII]$\lambda$3727   0       50.0   3675.0  0
-3868.74  NeIII_3868  [NeIII]$\lambda$3869 1      135.0   3755.0  0
-3889.05  H8_3889     H$\zeta$    	  1      135.0   3755.0  1
-3967.51  NeIII_3968  [NeIII]$\lambda$3967 1      135.0   3755.0  0
-3970.07  H7_3970     H$\epsilon$ 	  1      135.0   3755.0  0
+3868.74  NeIII_3868  [NeIII]$\lambda$3869 1      135.0   3825.0  0
+3889.05  H8_3889     H$\zeta$    	  1      135.0   3825.0  1
+3967.51  NeIII_3968  [NeIII]$\lambda$3967 1      135.0   3825.0  0
+3970.07  H7_3970     H$\epsilon$ 	  1      135.0   3825.0  0
 4101.73  H_DELTA     H$\delta$   	  2       50.0   4050.0  1
 4340.46  H_GAMMA     H$\gamma$   	  3      100.0   4225.0  1
 4363.21  OIII_4363   [OIII]$\lambda$4363  3      100.0   4225.0  0
