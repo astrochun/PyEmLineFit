@@ -99,6 +99,9 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     Created by Chun Ly, 9 February 2017
     Modified by Chun Ly, 11 February 2017
      - Add init_dict0 to allow for user-defined arrays to pass forward
+    Modified by Chun Ly, 12 February 2017
+     - Added line_type to indicate which columns are associated with each
+       emission line
     '''
 
     # Contains information about fitted emission lines
@@ -110,8 +113,9 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     if verbose == True: print fit_data0
 
     # Mod on 11/02/2107. Switched to dtype as first dict key
-    tagnames = init_dict0.keys()[1:]
-    dtype    = init_dict0['dtype']
+    tagnames  = init_dict0.keys()[1:]
+    dtype     = init_dict0['dtype']
+    line_type = ['N/A']*len(tagnames)
     #if DEEP2 == True:
     #    tagnames = ['OBJNO', 'SLIT', 'LINE', 'ZSPEC']
     #    dtype    = ['i', 'S10', 'i', 'f8']
@@ -124,14 +128,16 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     c_dtype = ['f8','f8','e','f8','e','e','e','e','e','f8']
 
     if resol == 'high':
-        t_tags   = ['OII_3727_'+str0 for str0 in cols]
-        tagnames = tagnames + t_tags
-        dtype    = dtype + c_dtype
+        t_tags     = ['OII_3727_'+str0 for str0 in cols]
+        tagnames   = tagnames + t_tags
+        dtype      = dtype + c_dtype
+        line_type += ['OII_3727'] * len(t_tags)
 
     for ll in range(len(fit_data0)):
-        t_tags   = [fit_data0['lines_txt'][ll]+'_'+str0 for str0 in cols]
-        tagnames = tagnames + t_tags
-        dtype    = dtype + c_dtype
+        t_tags     = [fit_data0['lines_txt'][ll]+'_'+str0 for str0 in cols]
+        tagnames   = tagnames + t_tags
+        dtype      = dtype + c_dtype
+        line_type += [fit_data0['lines_txt'][ll]] * len(t_tags)
 
     if weak == False:
         b_tags = ['H8_ABS_EW', 'H7_ABS_EW', 'H_DELTA_ABS_EW',
@@ -141,17 +147,19 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
         b_tags = ['H10_ABS_EW', 'H9_ABS_EW']
         b_dtype = ['f8', 'f8']
 
-    tagnames = tagnames + b_tags
-    dtype    = dtype + b_dtype
+    tagnames   = tagnames + b_tags
+    dtype      = dtype + b_dtype
+    line_type += ['N/A'] * len(b_tags)
 
     # Add columns for spectral coverage min/max wavelength
     wave_tags = ['LMIN', 'LMAX', 'LMIN0', 'LMAX0']
     w_dtype   = ['f8', 'f8', 'f8', 'f8']
 
-    tagnames  = tagnames + wave_tags
-    dtype     = dtype + w_dtype
+    tagnames   = tagnames + wave_tags
+    dtype      = dtype + w_dtype
+    line_type += ['N/A'] * len(wave_tags)
 
-    return tagnames, dtype, fit_data0
+    return tagnames, dtype, fit_data0, line_type
 #enddef
 
 def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
@@ -276,9 +284,9 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
 
     n_line = len(line) #len(data0)
 
-    # Mod on 11/02/2017
-    tagnames, dtype, \
-        fit_data0 = get_tagnames(init_dict0, resol=resol, weak=weak,
+    # Mod on 11/02/2017, 12/02/2017
+    tagnames, dtype, fit_data0, \
+        line_type = get_tagnames(init_dict0, resol=resol, weak=weak,
                                  silent=silent, verbose=verbose)
 
     # Define columns of data and table
@@ -299,14 +307,17 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
         if silent == False: print '### Filling in : ', tag
         if tag in tagnames: emline_data[tag] = init_dict0[tag]
 
+    # Mod on 12/02/2017 to include line_type
     dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
-             'spec_file': os.path.basename(infile0), 'x0': x0}
+             'line_type':line_type, 'spec_file': os.path.basename(infile0),
+             'x0': x0}
 
     # + on 10/02/2017
     if OH_file != None: dict0['OH_dict0'] = OH_dict0
 
     emline_data = fitting.main(dict0, out_pdf, silent=silent, verbose=verbose)
 
+    print emline_data
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
 

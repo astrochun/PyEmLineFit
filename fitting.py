@@ -97,6 +97,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
         'data0' : Array of 1-D spectra
         'emline_data' : Emission-line fitting results astropy table
         'fit_data0' : astropy table containing emission lines to be fitted
+        'line_type' : List indicating emission-line associated for each
+                      column of emline_data
+        'spec_file' : Name of FITS file to place in set_title() for labelling
         'x0' : numpy array of wavelength in Angstrom
 
     out_pdf : string
@@ -124,6 +127,8 @@ def main(dict0, out_pdf, silent=False, verbose=True):
      - Handle different input types ('SLIT', 'AP') for title labeling
      - Annotate emission lines for each panel in the upper right
      - Define [no_spec] to properly handle not plotting certain subplots panel
+     - Use [line_type] to fill emline_data with -100.00 when outside spectral
+       coverage
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -131,10 +136,13 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     data0       = dict0['data0']
     emline_data = dict0['emline_data']
     fit_data0   = dict0['fit_data0']
+    line_type   = dict0['line_type'] # + on 12/02/2017
     spec_file   = dict0['spec_file'] # + on 10/02/2017
     x0          = dict0['x0']
     zspec0      = emline_data['ZSPEC']
     line        = emline_data['LINE'] # + on 11/02/2017
+
+    emline_cols = emline_data.colnames # + on 12/02/2017
 
     # Get OH skyline info | + on 10/02/2017
     has_OH = 0
@@ -198,9 +206,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
 
             # + on 10/02/2017, Mod on 12/02/2017
             label0 = spec_file
-            if 'SLIT' in emline_data.colnames:
+            if 'SLIT' in emline_cols:
                 label0 += ' SLIT=%s' % emline_data['SLIT'][ll]
-            if 'AP' in emline_data.colnames:
+            if 'AP' in emline_cols:
                 label0 += ' AP=%s' % emline_data['AP'][ll]
             label0 += ' line=%04i' % line[ll]
             label0 += ' z=%6.4f %.1f-%.1f' % (zspec0[ll], lmin, lmax)
@@ -257,12 +265,20 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                               zorder=1)
             #endfor
 
-            # Remove plotting of non-use panels | + on 10/02/2017
+            # Remove plotting of non-use panels | + on 10/02/2017, Mod on 12/02/2017
             if len(no_spec) > 0:
                 no_panel = list(set(fit_data0['panels'][no_spec])) # Remove duplicates
                 for npl in no_panel:
                     t_col, t_row = npl % ncols, npl / ncols
                     ax_arr[t_row,t_col].axis('off')
+
+                # Set values to -100.00 when emission lines are out of spectral
+                # coverage | + on 12/02/2017
+                for ns in no_spec:
+                    no_cols = [ii for ii in range(len(line_type)) if \
+                               fit_data0['lines_txt'][ns] in line_type[ii]]
+                    for nc in no_cols:
+                        emline_data[emline_cols[nc]][ll] = -100.00
 
             # + on 10/02/2017
             subplots_adjust(left=0.025, bottom=0.025, top=0.975, right=0.975,
