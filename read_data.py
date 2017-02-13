@@ -163,7 +163,7 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
 #enddef
 
 def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
-         weak=False, silent=False, verbose=True):
+         out_fits=None, weak=False, silent=False, verbose=True):
 
     '''
     Main function for reading in data
@@ -209,6 +209,12 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
       Spectral resolution of 1-D spectra. For low resolution, the
       [OII] doublet cannot be resolved. Default: 'low'
 
+    out_pdf : string
+      Filename for output PDF file
+
+    out_fits : string
+      Filename for output FITS file containing emission-line fitting results
+
     weak : bool
       Indicate whether to fit weak nebular emission lines. Default: False
 
@@ -238,6 +244,7 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     Modified by Chun Ly, 12 February 2017
      - Handle case when 'LINE' is not provided in init_dict0
      - Handle case when 'ZSPEC' is not provided in init_dict0 -- Assume rest-frame
+     - Add out_fits keyword option
     '''
 
     if silent == False: print '### Begin read_data.main | '+systime()
@@ -263,11 +270,14 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     if 'ZSPEC' not in init_dict0.keys():
         init_dict0['ZSPEC'] = np.zeros(len(line))
 
+    str_in  = '.fits.gz' if '.gz' in infile0 else '.fits'
     # + on 09/02/2017
-    if out_pdf == None:
-        str_in  = '.fits.gz' if '.gz' in infile0 else '.fits'
-        out_pdf = infile0.replace(str_in,'.ELF.pdf')
+    if out_pdf == None: out_pdf = infile0.replace(str_in,'.ELF.pdf')
     if silent == False: print '### out_pdf : ', out_pdf
+
+    # + on 12/02/2017
+    if out_fits == None: out_fits = infile0.replace(str_in,'.ELF.fits')
+    if silent == False: print '### out_fits : ', out_fits
 
     l0    = hdr0['CRVAL1'] # Wavelength minimum
     dl    = hdr0['CDELT1'] # Wavelength dispersion
@@ -315,9 +325,9 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     # + on 10/02/2017
     if OH_file != None: dict0['OH_dict0'] = OH_dict0
 
-    emline_data = fitting.main(dict0, out_pdf, silent=silent, verbose=verbose)
+    emline_data = fitting.main(dict0, out_pdf, out_fits, silent=silent,
+                               verbose=verbose)
 
-    print emline_data
     if silent == False: print '### End read_data.main | '+systime()
 #enddef
 

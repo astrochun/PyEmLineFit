@@ -86,7 +86,7 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
                                               edgecolor='none'))
 #enddef
 
-def main(dict0, out_pdf, silent=False, verbose=True):
+def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     '''
     Provide explanation for function here.
 
@@ -104,6 +104,9 @@ def main(dict0, out_pdf, silent=False, verbose=True):
 
     out_pdf : string
       Filename for output PDF file
+
+    out_fits : string
+      Filename for output FITS file containing emission-line fitting results
 
     silent : boolean
       Turns off stdout messages. Default: False
@@ -129,6 +132,7 @@ def main(dict0, out_pdf, silent=False, verbose=True):
      - Define [no_spec] to properly handle not plotting certain subplots panel
      - Use [line_type] to fill emline_data with -100.00 when outside spectral
        coverage
+     - Add out_fits input; Write FITS binary table file
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -258,7 +262,8 @@ def main(dict0, out_pdf, silent=False, verbose=True):
                     bbox_props = dict(boxstyle="square,pad=0.3", fc="white", alpha=0.9,
                                       ec="none")
                     t_ax0.annotate(line_annot, (0.95,0.95), xycoords='axes fraction',
-                                   ha='right', va='top', bbox=bbox_props, zorder=6)
+                                   ha='right', va='top', bbox=bbox_props, zorder=6,
+                                   fontsize=10)
 
                 # Draw vertical lines for axes | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
@@ -289,6 +294,10 @@ def main(dict0, out_pdf, silent=False, verbose=True):
     #endfor
 
     pp.close()
+
+    # + on 12/02/2017
+    if silent == False: print '### Writing : ', out_fits
+    emline_data.write(out_fits, format='fits', overwrite=True)
 
     if silent == False: print '### End fitting.main | '+systime()
     return emline_data

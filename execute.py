@@ -48,6 +48,7 @@ def deep2(silent=False, verbose=True):
     Created by Chun Ly, 11 February 2017
     Modified by Chun Ly, 12 February 2017
      - Change order of init_dict0 so dtype is first, following format
+     - Added fits_files array
     '''
     
     if silent == False: print '### Begin execute.deep2 | '+systime()
@@ -59,7 +60,8 @@ def deep2(silent=False, verbose=True):
 
     OH_files  = glob.glob(deep2_path+'DEEP2_Field?.OH.txt')
 
-    pdf_files = [str0.replace('.fits','.ELF.pdf') for str0 in infiles]
+    pdf_files  = [str0.replace('.fits','.ELF.pdf') for str0 in infiles]
+    fits_files = [str0.replace('.fits','.ELF.fits') for str0 in infiles]
 
     for ff in xrange(len(infiles)):
         cat_data = fits.getdata(cat_files[ff])
