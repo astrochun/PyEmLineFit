@@ -15,9 +15,11 @@ import PyEmLineFit as ELF
 import read_data
 import fitting
 import execute
+import test
 
 reload(read_data)
 reload(fitting)
 reload(execute)
+reload(test)
 
 #__all__ = ['read_data']
