@@ -31,6 +31,8 @@ from pylab import subplots_adjust # + on 10/02/2017
 
 from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
+import pyspeckit as psk # + on 13/02/2017
+
 def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     '''
     Shade wavelengths affected by OH night skylines
@@ -232,9 +234,29 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 if panel_check:
                     xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
 
+                # + on 14/02/2017
+                box_reg  = np.where((x0 >= z_lines[s_idx] - 100) &
+                                    (x0 <= z_lines[s_idx] + 100))[0]
+
+                box_reg2 = np.where((x0 >= z_lines[s_idx] - 100) &
+                                    (x0 <= z_lines[s_idx] + 100) &
+                                    (line_flag == 0) & (OH_flag0 == 0) &
+                                    (y0 ne 0.0))[0]
+
                 in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
                 in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
                                      (OH_flag0 == 0))[0]
+
+                # + on 14/02/2017
+                sig0 = np.std(y0[in_range2])
+                med0 = np.median(y0[box_reg2])
+
+                px = psk.units.SpectroscopicAxis(x0[in_range], unit='angstroms')
+                sp = psk.Spectrum(data=y0[in_range]-med0, xarr=px,
+                                  error=np.repeat(sig0,len(in_range)))
+                guess = [np.max(y0[in_range2]-med0), z_lines[s_idx], 1.0]
+                sp.specfit(fittype='gaussian', guesses=guess)
+                print sp.specfit.parinfo
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
