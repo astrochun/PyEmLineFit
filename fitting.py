@@ -135,9 +135,15 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Use [line_type] to fill emline_data with -100.00 when outside spectral
        coverage
      - Add out_fits input; Write FITS binary table file
+    Modified by Chun Ly, 18 February 2017
+     - Add fit_annot to upper left hand corner
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
+
+    # Moved up on 18/02/2017
+    bbox_props = dict(boxstyle="square,pad=0.3", fc="white",
+                      alpha=0.9, ec="none")
 
     data0       = dict0['data0']
     emline_data = dict0['emline_data']
@@ -231,8 +237,12 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 t_col, t_row = ss_panel % ncols, ss_panel / ncols
 
                 t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
+
                 if panel_check:
                     xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
+                    # + on 18/02/2017
+                    fit_annot = ['', 'mod = ', 'data = ', r'$\sigma$ = ',
+                                 'S/N = ', r'EW$_{\rm abs}$ = ']
 
                 # + on 14/02/2017
                 box_reg  = np.where((x0 >= z_lines[s_idx] - 100) &
@@ -241,7 +251,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 box_reg2 = np.where((x0 >= z_lines[s_idx] - 100) &
                                     (x0 <= z_lines[s_idx] + 100) &
                                     (line_flag == 0) & (OH_flag0 == 0) &
-                                    (y0 ne 0.0))[0]
+                                    (y0 != 0.0))[0]
 
                 in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
                 in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
@@ -256,7 +266,11 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                                   error=np.repeat(sig0,len(in_range)))
                 guess = [np.max(y0[in_range2]-med0), z_lines[s_idx], 1.0]
                 sp.specfit(fittype='gaussian', guesses=guess)
-                print sp.specfit.parinfo
+                #sp.plotter(t_ax0)
+                #sp.specfit.plot_fit()
+                #print sp.specfit.parinfo
+
+                # fit_annot[0] += sp.specfit.parinfo
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -280,13 +294,19 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     # Annotate emission lines in the upper right panel | + on 12/02/2017
                     in_panel = np.where(fit_data0['panels'][in_spec] == ss_panel)[0]
                     in_panel = in_spec[in_panel]
-                    line_annot = '\n'.join([a for a in fit_data0['lines_greek'][in_panel]])
-                    bbox_props = dict(boxstyle="square,pad=0.3", fc="white", alpha=0.9,
-                                      ec="none")
-                    t_ax0.annotate(line_annot, (0.95,0.95), xycoords='axes fraction',
-                                   ha='right', va='top', bbox=bbox_props, zorder=6,
-                                   fontsize=10)
 
+                    # Label lines for each panel
+                    line_annot = '\n'.join([a for a in
+                                            fit_data0['lines_greek'][in_panel]])
+                    t_ax0.annotate(line_annot, (0.95,0.95), ha='right', va='top',
+                                   xycoords='axes fraction', bbox=bbox_props,
+                                   zorder=6, fontsize=10)
+
+                    # Annotate results of fit | + on 18/02/2017
+                    fit_annot0 = '\n'.join([a for a in fit_annot])
+                    t_ax0.annotate(fit_annot0, (0.05,0.95), ha='left', va='top',
+                                   xycoords='axes fraction', bbox=bbox_props,
+                                   zorder=6, fontsize=8)
                 # Draw vertical lines for axes | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
                               zorder=1)
@@ -294,7 +314,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
             # Remove plotting of non-use panels | + on 10/02/2017, Mod on 12/02/2017
             if len(no_spec) > 0:
-                no_panel = list(set(fit_data0['panels'][no_spec])) # Remove duplicates
+                no_panel = list(set(fit_data0['panels'][no_spec])) # Remove dupl.
                 for npl in no_panel:
                     t_col, t_row = npl % ncols, npl / ncols
                     ax_arr[t_row,t_col].axis('off')
