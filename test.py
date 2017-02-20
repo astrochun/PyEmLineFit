@@ -26,9 +26,9 @@ def test():
     box_reg = np.where((x0 >= z_line - 100) & (x0 <= z_line + 100))[0]
 
     sig0 = np.std(y0[box_reg])
-    med0 = np.median(y0[box_reg])
+    # med0 = np.median(y0[box_reg])
 
-    print sig0, med0
+    print sig0 #, med0
     px = psk.units.SpectroscopicAxis(x0[box_reg], unit='angstroms')
 
     y0 = y0 # - med0
@@ -37,7 +37,7 @@ def test():
 
     print 'before : ', np.min(sp.data), np.max(sp.data)
     exclude = get_exclude(z_lines)
-    sp.baseline(annotate=True, subtract=True, exclude=exclude)
+    sp.baseline(annotate=True, subtract=False, exclude=exclude)
     print 'after : ', np.min(sp.data), np.max(sp.data)
 
     guess = [y0[box_reg].max(), z_line, 1.0]
@@ -45,7 +45,7 @@ def test():
     sp.specfit(fittype='gaussian', guesses=guess)
     print sp.specfit.parinfo
 
-    print type(sp.specfit.parinfo)
+    # print type(sp.specfit.parinfo)
 
     fig, ax = plt.subplots()
     print type(ax)
@@ -55,8 +55,12 @@ def test():
     #print type(ax)
     #ax.axhline(med0, color='m', linewidth=4)
 
-    sp.baseline.plot_baseline(annotate=True, linewidth=2)
     ax.plot(x0,y0)
+
+    sp.baseline.plot_baseline(annotate=True, linewidth=2)
+    cont_arr = sp.baseline.get_model(px) #x0[box_reg])
+    #ax.plot(x0[box_reg],cont_arr, 'g-', linewidth=10)
+
     ax.set_xlim([8500,9000])
 
     fig = plt.gcf()

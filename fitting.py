@@ -88,6 +88,39 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
                                               edgecolor='none'))
 #enddef
 
+def get_bl_exclude(z_lines, width=5, silent=True, verbose=False):
+    '''
+    Provide list with minimum and maximum exclusion
+
+    Parameters
+    ----------
+    z_lines : list or numpy.array
+      Contains the observed wavelength to exclude
+
+    width : float
+      width to exclude. Actual width is +/- width
+      Default: 5 Angstroms
+
+    silent : boolean
+      Turns off stdout messages. Default: True
+
+    verbose : boolean
+      Turns on additional stdout messages. Default: False
+
+    Returns
+    -------
+
+    Notes
+    -----
+    Created by Chun Ly, 19 February 2017
+
+    '''
+    exclude = []
+    for zz in range(len(z_lines)):
+        exclude += (z_lines[zz]+np.array([-width,width])).tolist()
+    return exclude
+#enddef
+
 def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     '''
     Provide explanation for function here.
@@ -137,6 +170,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Add out_fits input; Write FITS binary table file
     Modified by Chun Ly, 18 February 2017
      - Add fit_annot to upper left hand corner
+    Modified by Chun Ly, 18 February 2017
+     - Avoid subtracting median. Use baseline fitting from pyspeckit
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -259,18 +294,27 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 # + on 14/02/2017
                 sig0 = np.std(y0[in_range2])
-                med0 = np.median(y0[box_reg2])
+                #med0 = np.median(y0[box_reg2])
 
                 px = psk.units.SpectroscopicAxis(x0[in_range], unit='angstroms')
-                sp = psk.Spectrum(data=y0[in_range]-med0, xarr=px,
+                # Mod on 19/02/2017. Do not remove median
+                sp = psk.Spectrum(data=y0[in_range], xarr=px,
                                   error=np.repeat(sig0,len(in_range)))
-                guess = [np.max(y0[in_range2]-med0), z_lines[s_idx], 1.0]
-                sp.specfit(fittype='gaussian', guesses=guess)
-                #sp.plotter(t_ax0)
-                #sp.specfit.plot_fit()
-                #print sp.specfit.parinfo
 
-                # fit_annot[0] += sp.specfit.parinfo
+                # Perform baseline fitting | + on 19/02/2017
+                bl_exclude = get_bl_exclude(z_lines)
+                sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
+
+                guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
+                sp.specfit(fittype='gaussian', guesses=guess)
+
+                # sp.plotter(t_ax0)
+                # sp.specfit.plot_fit()
+
+                # + on 19/02/2017
+                s_com = ', ' if fit_annot[0] != '' else ''
+                fit_annot[0] += s_com+'%.1f' % sp.specfit.parinfo['SHIFT0'].value
+                fit_annot[3] += s_com+'%.2f' % sp.specfit.parinfo['WIDTH0'].value
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -302,14 +346,17 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                                    xycoords='axes fraction', bbox=bbox_props,
                                    zorder=6, fontsize=10)
 
-                    # Annotate results of fit | + on 18/02/2017
+                # Draw vertical lines for emission lines | + on 10/02/2017
+                t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
+                              zorder=1)
+
+                # Annotate results of fit | + on 18/02/2017
+                # Moved lower on 19/02/2017
+                if fit_data0['lines0'][s_idx] == fit_data0['lines0'][in_panel[-1]]:
                     fit_annot0 = '\n'.join([a for a in fit_annot])
                     t_ax0.annotate(fit_annot0, (0.05,0.95), ha='left', va='top',
                                    xycoords='axes fraction', bbox=bbox_props,
                                    zorder=6, fontsize=8)
-                # Draw vertical lines for axes | + on 10/02/2017
-                t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
-                              zorder=1)
             #endfor
 
             # Remove plotting of non-use panels | + on 10/02/2017, Mod on 12/02/2017
