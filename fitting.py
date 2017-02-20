@@ -172,6 +172,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Add fit_annot to upper left hand corner
     Modified by Chun Ly, 18 February 2017
      - Avoid subtracting median. Use baseline fitting from pyspeckit
+     - Define flux_sum
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -179,6 +180,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     # Moved up on 18/02/2017
     bbox_props = dict(boxstyle="square,pad=0.3", fc="white",
                       alpha=0.9, ec="none")
+
+    cgsflux = 1e-17 # + on 19/02/2017
 
     data0       = dict0['data0']
     emline_data = dict0['emline_data']
@@ -305,8 +308,16 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 bl_exclude = get_bl_exclude(z_lines)
                 sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
 
+                med0 = sp.baseline.get_model(z_lines[s_idx])
+                print '## med0 : ', med0
+
                 guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
                 sp.specfit(fittype='gaussian', guesses=guess)
+
+                # + on 19/02/2017
+                sigG = sp.specfit.parinfo['WIDTH0'].value
+                sum_arr  = np.where(np.abs((x0-z_lines[s_idx]) <= 2.5*sigG))[0]
+                flux_sum = np.sum(y0[sum_arr]-med0) / cgsflux
 
                 # sp.plotter(t_ax0)
                 # sp.specfit.plot_fit()
@@ -314,7 +325,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 # + on 19/02/2017
                 s_com = ', ' if fit_annot[0] != '' else ''
                 fit_annot[0] += s_com+'%.1f' % sp.specfit.parinfo['SHIFT0'].value
-                fit_annot[3] += s_com+'%.2f' % sp.specfit.parinfo['WIDTH0'].value
+                fit_annot[3] += s_com+'%.2f' % sigG
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -345,6 +356,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     t_ax0.annotate(line_annot, (0.95,0.95), ha='right', va='top',
                                    xycoords='axes fraction', bbox=bbox_props,
                                    zorder=6, fontsize=10)
+
+                t_ax0.axhline(y=med0, linewidth=2, color='g', zorder=1)
 
                 # Draw vertical lines for emission lines | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
