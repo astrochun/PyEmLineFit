@@ -170,9 +170,11 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Add out_fits input; Write FITS binary table file
     Modified by Chun Ly, 18 February 2017
      - Add fit_annot to upper left hand corner
-    Modified by Chun Ly, 18 February 2017
+    Modified by Chun Ly, 19 February 2017
      - Avoid subtracting median. Use baseline fitting from pyspeckit
      - Define flux_sum
+    Modified by Chun Ly, 22 February 2017
+     - Plot fit results in dashed red lines
     '''
     
     if silent == False: print '### Begin fitting.main | '+systime()
@@ -319,6 +321,9 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 sum_arr  = np.where(np.abs((x0-z_lines[s_idx]) <= 2.5*sigG))[0]
                 flux_sum = np.sum(y0[sum_arr]-med0) / cgsflux
 
+                # + on 22/02/2017
+                y_mod = sp.specfit.get_model(x0[in_range])
+                t_ax0.plot(x0[in_range], y_mod, 'r--', linewidth=1, zorder=6)
                 # sp.plotter(t_ax0)
                 # sp.specfit.plot_fit()
 
