@@ -8,9 +8,7 @@ profiles
 
 import sys, os
 
-from chun_codes import systime
-from chun_codes import match_nosort
-from chun_codes import chun_crossmatch
+from chun_codes import systime, match_nosort, chun_crossmatch
 
 from os.path import exists
 import commands
@@ -18,7 +16,6 @@ from astropy.io import ascii as asc
 from astropy.io import fits
 
 import numpy as np
-import array, time, sets
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches # + on 10/02/2017

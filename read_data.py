@@ -15,7 +15,6 @@ from astropy.io import ascii as asc
 from astropy.io import fits
 
 import numpy as np
-import array, time, sets
 
 import matplotlib.pyplot as plt
 import glob
