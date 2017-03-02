@@ -30,6 +30,8 @@ from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
 import pyspeckit as psk # + on 13/02/2017
 
+sig_sum = 2.5 # + on 01/03/2017
+
 def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     '''
     Shade wavelengths affected by OH night skylines
@@ -177,7 +179,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     if silent == False: print '### Begin fitting.main | '+systime()
 
     # Moved up on 18/02/2017
-    bbox_props = dict(boxstyle="square,pad=0.3", fc="white",
+    bbox_props = dict(boxstyle="square,pad=0.1", fc="white",
                       alpha=0.9, ec="none")
 
     cgsflux = 1e-17 # + on 19/02/2017
@@ -314,8 +316,10 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 sp.specfit(fittype='gaussian', guesses=guess)
 
                 # + on 19/02/2017
-                sigG = sp.specfit.parinfo['WIDTH0'].value
-                sum_arr  = np.where(np.abs((x0-z_lines[s_idx]) <= 2.5*sigG))[0]
+                sigG    = sp.specfit.parinfo['WIDTH0'].value
+                lambdaC = sp.specfit.parinfo['SHIFT0'].value # + on 01/03/2017
+
+                sum_arr  = np.where(np.abs((x0-z_lines[s_idx])<=sig_sum*sigG))[0]
                 flux_sum = np.sum(y0[sum_arr]-med0) / cgsflux
 
                 # + on 22/02/2017
@@ -324,9 +328,14 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 # sp.plotter(t_ax0)
                 # sp.specfit.plot_fit()
 
+                # Plot residuals - orange solid line | + on 01/03/2017
+                temp = np.where(np.abs(x0[in_range]-lambdaC)/sigG <= sig_sum)[0]
+                y_resid = sp.data[temp] - y_mod[temp]
+                t_ax0.plot(x0[in_range[temp]], y_resid, '-', color='orange')
+
                 # + on 19/02/2017
                 s_com = ', ' if fit_annot[0] != '' else ''
-                fit_annot[0] += s_com+'%.1f' % sp.specfit.parinfo['SHIFT0'].value
+                fit_annot[0] += s_com+'%.1f' % lambdaC
                 fit_annot[3] += s_com+'%.2f' % sigG
 
                 # Mod on 10/02/2017
@@ -369,9 +378,9 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 # Moved lower on 19/02/2017
                 if fit_data0['lines0'][s_idx] == fit_data0['lines0'][in_panel[-1]]:
                     fit_annot0 = '\n'.join([a for a in fit_annot])
-                    t_ax0.annotate(fit_annot0, (0.05,0.95), ha='left', va='top',
-                                   xycoords='axes fraction', bbox=bbox_props,
-                                   zorder=6, fontsize=8)
+                    t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left',
+                                   va='top', xycoords='axes fraction',
+                                   bbox=bbox_props, zorder=6, fontsize=8)
             #endfor
 
             # Remove plotting of non-use panels | + on 10/02/2017, Mod on 12/02/2017
