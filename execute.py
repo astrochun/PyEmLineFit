@@ -27,7 +27,6 @@ import collections
 import read_data
 
 def deep2(silent=False, verbose=True):
-
     '''
     Execute PyEmLinefit for the DEEP2 DR4 data
 

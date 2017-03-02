@@ -88,7 +88,7 @@ def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
                                               edgecolor='none'))
 #enddef
 
-def get_bl_exclude(z_lines, width=5, silent=True, verbose=False):
+def get_bl_exclude(z_lines, w=5, OH_dict0=None, silent=True, verbose=False):
     '''
     Provide list with minimum and maximum exclusion
 
@@ -97,7 +97,7 @@ def get_bl_exclude(z_lines, width=5, silent=True, verbose=False):
     z_lines : list or numpy.array
       Contains the observed wavelength to exclude
 
-    width : float
+    w : float
       width to exclude. Actual width is +/- width
       Default: 5 Angstroms
 
@@ -113,11 +113,26 @@ def get_bl_exclude(z_lines, width=5, silent=True, verbose=False):
     Notes
     -----
     Created by Chun Ly, 19 February 2017
-
+    Modified by Chun Ly, 2 March 2017
+     - Use generator function to expedite code
+     - Includes option to mask OH night skylines if available
     '''
-    exclude = []
-    for zz in range(len(z_lines)):
-        exclude += (z_lines[zz]+np.array([-width,width])).tolist()
+
+    # Mod on 02/03/2017
+    listoflist = [[a,b] for a,b in zip(z_lines-w,z_lines+w)]
+    exclude    = np.reshape(listoflist, len(z_lines)*2).tolist()
+    #exclude = []
+    #for zz in range(len(z_lines)):
+    #    exclude += (z_lines[zz]+np.array([-width,width])).tolist()
+
+    # + on 02/03/2017
+    if OH_dict0 != None:
+        OH_xmin0, OH_xmax0 = OH_dict0['OH_xmin0'], OH_dict0['OH_xmax0']
+
+        OH_list = [[a,b] for a,b in zip(OH_xmin0,OH_xmax0)]
+        exclude += np.reshape(OH_list, len(OH_xmin0)*2).tolist()
+        #for oo in range(len(OH_xmin0)):
+        #    exclude += [OH_xmin0[oo],OH_xmax0[oo]]
     return exclude
 #enddef
 
@@ -182,12 +197,15 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Get continuum level from sp.baseline.basespec
      - Compute flux_sum using correct continuum
      - Draw -2.5,+2.5 sigma (black dashed lines)
+     - Define OH_dict0 from dict0
+     - Pass OH_dict0 to get_bl_exclude()
+     - Remove continuum from fit for computing residual spectrum
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
 
     # Moved up on 18/02/2017
-    bbox_props = dict(boxstyle="square,pad=0.1", fc="white",
+    bbox_props = dict(boxstyle="square,pad=0.15", fc="white",
                       alpha=0.9, ec="none")
 
     cgsflux = 1e-17 # + on 19/02/2017
@@ -207,11 +225,13 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     # Get OH skyline info | + on 10/02/2017
     has_OH = 0
     if 'OH_dict0' in dict0.keys():
-        OH_flag0 = dict0['OH_dict0']['OH_flag0']
-        OH_xmin0 = dict0['OH_dict0']['OH_xmin0']
-        OH_xmax0 = dict0['OH_dict0']['OH_xmax0']
+        OH_dict0 = dict0['OH_dict0'] # + on 02/03/2017
+        OH_flag0 = OH_dict0['OH_flag0']
+        OH_xmin0 = OH_dict0['OH_xmin0']
+        OH_xmax0 = OH_dict0['OH_xmax0']
         has_OH = 1
     else:
+        OH_dict0 = None # + on 02/03/2017
         OH_flag0 = np.zeros(x0, dtype=np.int8)
 
     n_spec = len(data0)
@@ -315,8 +335,9 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 sp = psk.Spectrum(data=y0[in_range], xarr=px,
                                   error=np.repeat(sig0,len(in_range)))
 
-                # Perform baseline fitting | + on 19/02/2017
-                bl_exclude = get_bl_exclude(z_lines)
+                # Perform baseline fitting | + on 19/02/2017, Mod on 02/03/2017
+                bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
+
                 sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
 
                 cont_spec = sp.baseline.basespec # Mod on 02/03/2017
@@ -331,7 +352,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 # Mod on 02/03/2017 for indexing
                 sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)<=sig_sum*sigG))[0]
-                flux_sum = dl * np.sum(y0[in_range[sum_arr]]-cont_spec[sum_arr]) / cgsflux
+                flux_sum = dl * np.sum(y0[in_range[sum_arr]]-cont_spec[sum_arr])
 
                 # + on 22/02/2017
                 y_mod = sp.specfit.get_model(x0[in_range])
@@ -339,16 +360,20 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 # sp.plotter(t_ax0)
                 # sp.specfit.plot_fit()
 
+                flux_mod = np.sum((y_mod-cont_spec)*dl) # + on 02/03/2017
+
                 # Plot residuals - orange solid line | + on 01/03/2017
+                # Mod on 02/03/2017 to remove continuum from y_resid
                 temp = np.where(np.abs(x0[in_range]-lambdaC)/sigG <= sig_sum)[0]
-                y_resid = sp.data[temp] - y_mod[temp]
+                y_resid = sp.data[temp] - (y_mod[temp]-cont_spec[temp])
                 t_ax0.plot(x0[in_range[temp]], y_resid, '-', color='orange')
 
                 # + on 19/02/2017
                 s_com = ', ' if fit_annot[0] != '' else ''
                 fit_annot[0] += s_com+'%.1f' % lambdaC
                 fit_annot[3] += s_com+'%.2f' % sigG
-                fit_annot[2] += s_com+'%.2f' % flux_sum # + on 02/03/2017
+                fit_annot[1] += s_com+'%.2f' % (flux_mod/cgsflux) # + on 02/03/2017
+                fit_annot[2] += s_com+'%.2f' % (flux_sum/cgsflux) # + on 02/03/2017
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -364,7 +389,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     t_ax0.minorticks_on()
 
                     # Draw OH skyline | + on 10/02/2017
-                    if has_OH: draw_OH(dict0['OH_dict0'], t_ax0, xra, yra)
+                    if has_OH: draw_OH(OH_dict0, t_ax0, xra, yra)
 
                     # Draw horizontal line at y=0
                     t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
@@ -383,13 +408,13 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 # Plot continuum | Mod on 02/03/2017
                 #t_ax0.axhline(y=med0, linewidth=2, color='g', zorder=1)
-                t_ax0.plot(x0[in_range], cont_spec, linewidth=2, color='g',
-                           zorder=1)
+                #t_ax0.plot(x0[in_range], cont_spec, linewidth=2, color='g',
+                #           zorder=1)
 
-                # Plot -2.5,2.5sig as dashed black lines | + on 02/03/2017
+                # Plot -2.5,2.5sig as dotted black lines | + on 02/03/2017
                 for t_val in sig_sum*sigG*np.array([-1,1]):
                     t_ax0.axvline(x=lambdaC+t_val, color='k', linewidth=0.5,
-                                  linestyle='--')
+                                  linestyle=':')
 
                 # Draw vertical lines for emission lines | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
@@ -399,8 +424,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 # Moved lower on 19/02/2017
                 if ss_line0 == fit_data0['lines0'][in_panel[-1]]:
                     fit_annot0 = '\n'.join([a for a in fit_annot])
-                    t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left',
-                                   va='top', xycoords='axes fraction',
+                    t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left', va='top',
+                                   xycoords='axes fraction', color='orange',
                                    bbox=bbox_props, zorder=6, fontsize=8)
             #endfor
 
