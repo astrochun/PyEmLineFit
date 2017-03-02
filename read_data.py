@@ -13,7 +13,7 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
-from astropy import log
+from astropy import log # + on 01/03/2017
 
 import numpy as np
 
@@ -245,6 +245,8 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
      - Handle case when 'LINE' is not provided in init_dict0
      - Handle case when 'ZSPEC' is not provided in init_dict0 -- Assume rest-frame
      - Add out_fits keyword option
+    Modified by Chun Ly, 2 March 2017
+     - Include [dl] in dict0
     '''
 
     if silent == False: log.info('### Begin read_data.main : '+systime())
@@ -318,9 +320,10 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
         if tag in tagnames: emline_data[tag] = init_dict0[tag]
 
     # Mod on 12/02/2017 to include line_type
+    # Mod on 02/03/2017 to include dl - spectral dispersion
     dict0 = {'data0':data0, 'emline_data':emline_data, 'fit_data0':fit_data0,
              'line_type':line_type, 'spec_file': os.path.basename(infile0),
-             'x0': x0}
+             'x0': x0, 'dl': dl}
 
     # + on 10/02/2017
     if OH_file != None: dict0['OH_dict0'] = OH_dict0

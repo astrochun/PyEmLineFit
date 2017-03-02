@@ -14,7 +14,7 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
-from astropy import log
+from astropy import log # + on 01/03/2017
 
 import numpy as np
 
@@ -175,6 +175,13 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Define flux_sum
     Modified by Chun Ly, 22 February 2017
      - Plot fit results in dashed red lines
+    Modified by Chun Ly, 01 March 2017
+     - Overlay residuals of Gaussian fits as solid orange lines
+    Modified by Chun Ly, 02 March 2017
+     - Get [dl] (spectral dispersion) from dict0
+     - Get continuum level from sp.baseline.basespec
+     - Compute flux_sum using correct continuum
+     - Draw -2.5,+2.5 sigma (black dashed lines)
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -191,6 +198,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     line_type   = dict0['line_type'] # + on 12/02/2017
     spec_file   = dict0['spec_file'] # + on 10/02/2017
     x0          = dict0['x0']
+    dl          = dict0['dl'] # + on 02/03/2017
     zspec0      = emline_data['ZSPEC']
     line        = emline_data['LINE'] # + on 11/02/2017
 
@@ -271,6 +279,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 panel_check = 1 if ss == 0 else 0
 
                 ss_panel = fit_data0['panels'][s_idx] # + on 12/02/2017
+                ss_line0 = fit_data0['lines0'][s_idx] # + on 01/03/2017
                 if ss != 0:
                     panel_check = ss_panel - fit_data0['panels'][in_spec[ss-1]]
 
@@ -282,7 +291,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
                     # + on 18/02/2017
                     fit_annot = ['', 'mod = ', 'data = ', r'$\sigma$ = ',
-                                 'S/N = ', r'EW$_{\rm abs}$ = ']
+                                 'S/N = ', r'W$_{\rm abs}$ = ']
 
                 # + on 14/02/2017
                 box_reg  = np.where((x0 >= z_lines[s_idx] - 100) &
@@ -310,8 +319,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 bl_exclude = get_bl_exclude(z_lines)
                 sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
 
-                med0 = sp.baseline.get_model(z_lines[s_idx])
-                print '## med0 : ', med0
+                cont_spec = sp.baseline.basespec # Mod on 02/03/2017
+                # print '## med0 : ', med0
 
                 guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
                 sp.specfit(fittype='gaussian', guesses=guess)
@@ -320,8 +329,9 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 sigG    = sp.specfit.parinfo['WIDTH0'].value
                 lambdaC = sp.specfit.parinfo['SHIFT0'].value # + on 01/03/2017
 
-                sum_arr  = np.where(np.abs((x0-z_lines[s_idx])<=sig_sum*sigG))[0]
-                flux_sum = np.sum(y0[sum_arr]-med0) / cgsflux
+                # Mod on 02/03/2017 for indexing
+                sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)<=sig_sum*sigG))[0]
+                flux_sum = dl * np.sum(y0[in_range[sum_arr]]-cont_spec[sum_arr]) / cgsflux
 
                 # + on 22/02/2017
                 y_mod = sp.specfit.get_model(x0[in_range])
@@ -338,6 +348,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 s_com = ', ' if fit_annot[0] != '' else ''
                 fit_annot[0] += s_com+'%.1f' % lambdaC
                 fit_annot[3] += s_com+'%.2f' % sigG
+                fit_annot[2] += s_com+'%.2f' % flux_sum # + on 02/03/2017
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -358,9 +369,10 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     # Draw horizontal line at y=0
                     t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
 
-                    # Annotate emission lines in the upper right panel | + on 12/02/2017
-                    in_panel = np.where(fit_data0['panels'][in_spec] == ss_panel)[0]
-                    in_panel = in_spec[in_panel]
+                    # Annotate emission lines in the UR panel | + on 12/02/2017
+                    # Mod on 01/03/2017 to simplify indexing
+                    in_panel = np.where(fit_data0['panels'] == ss_panel)[0]
+                    # in_panel = in_spec[in_panel]
 
                     # Label lines for each panel
                     line_annot = '\n'.join([a for a in
@@ -369,7 +381,15 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                                    xycoords='axes fraction', bbox=bbox_props,
                                    zorder=6, fontsize=10)
 
-                t_ax0.axhline(y=med0, linewidth=2, color='g', zorder=1)
+                # Plot continuum | Mod on 02/03/2017
+                #t_ax0.axhline(y=med0, linewidth=2, color='g', zorder=1)
+                t_ax0.plot(x0[in_range], cont_spec, linewidth=2, color='g',
+                           zorder=1)
+
+                # Plot -2.5,2.5sig as dashed black lines | + on 02/03/2017
+                for t_val in sig_sum*sigG*np.array([-1,1]):
+                    t_ax0.axvline(x=lambdaC+t_val, color='k', linewidth=0.5,
+                                  linestyle='--')
 
                 # Draw vertical lines for emission lines | + on 10/02/2017
                 t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
@@ -377,7 +397,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 # Annotate results of fit | + on 18/02/2017
                 # Moved lower on 19/02/2017
-                if fit_data0['lines0'][s_idx] == fit_data0['lines0'][in_panel[-1]]:
+                if ss_line0 == fit_data0['lines0'][in_panel[-1]]:
                     fit_annot0 = '\n'.join([a for a in fit_annot])
                     t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left',
                                    va='top', xycoords='axes fraction',

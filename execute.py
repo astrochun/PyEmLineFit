@@ -13,7 +13,7 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
-from astropy import log
+from astropy import log # + on 01/03/2017
 
 import numpy as np
 
