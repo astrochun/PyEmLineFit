@@ -3,11 +3,17 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pyspeckit as psk
 
-def get_exclude(z_lines):
-    exclude = []
-    for zz in range(len(z_lines)):
-        exclude += (z_lines[zz]+np.array([-5,5])).tolist()
-    return exclude
+def get_exclude(z_lines, w=5):
+    # Mod on 02/03/2017 to improve efficiency for exclude list definition
+    listoflist = [[a,b] for a,b in zip(z_lines-w,z_lines+w)]
+    exclude = np.reshape(listoflist, len(z_lines)*2)
+    #for zz in range(len(z_lines)):
+    #    test = (z_lines[zz]+np.array([-5,5])).tolist()
+    #    exclude.append(test)
+    #exclude.append((z_lines-5.0).tolist())
+    #exclude.append((z_lines+5.0).tolist())
+
+    return exclude.tolist()
 
 def test():
     infile0 = '/Users/cly/data/DEEP2/DR4/DEEP2_2D_Field1.f3.fits'
@@ -37,11 +43,14 @@ def test():
 
     print 'before : ', np.min(sp.data), np.max(sp.data)
     exclude = get_exclude(z_lines)
+    print len(exclude)
+    print exclude
+
     sp.baseline(annotate=True, subtract=False, exclude=exclude)
     print 'after : ', np.min(sp.data), np.max(sp.data)
 
     med0 = sp.baseline.basespec
-    print '## med0 : ', med0
+    # print '## med0 : ', med0
 
     guess = [y0[box_reg].max(), z_line, 1.0]
     print guess
