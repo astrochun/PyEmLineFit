@@ -40,6 +40,9 @@ def test():
     sp.baseline(annotate=True, subtract=False, exclude=exclude)
     print 'after : ', np.min(sp.data), np.max(sp.data)
 
+    med0 = sp.baseline.basespec
+    print '## med0 : ', med0
+
     guess = [y0[box_reg].max(), z_line, 1.0]
     print guess
     sp.specfit(fittype='gaussian', guesses=guess)
