@@ -14,6 +14,7 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
+from astropy import log
 
 import numpy as np
 
@@ -176,7 +177,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Plot fit results in dashed red lines
     '''
     
-    if silent == False: print '### Begin fitting.main | '+systime()
+    if silent == False: log.info('### Begin fitting.main: '+systime())
 
     # Moved up on 18/02/2017
     bbox_props = dict(boxstyle="square,pad=0.1", fc="white",
@@ -208,14 +209,14 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     n_spec = len(data0)
     n_line = len(line) # + on 11/02/2017
 
-    if silent == False: print '### Output PDF file : ', out_pdf
+    if silent == False: log.info('### Output PDF file : '+out_pdf)
     pp = PdfPages(out_pdf) # + on 10/02/2017
     nrows, ncols = 4, 2
 
     for ll in xrange(10): #n_line):
         if verbose == True:
-            print '### Working on line=%04i zspec : %.4f' % (line[ll],
-                                                             zspec0[ll])
+            log.info('### Working on line=%04i zspec : %.4f' % (line[ll],
+                                                                zspec0[ll]))
 
         y0 = data0[line[ll]-1]
 
@@ -409,10 +410,10 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     pp.close()
 
     # + on 12/02/2017
-    if silent == False: print '### Writing : ', out_fits
+    if silent == False: log.info('### Writing : '+out_fits)
     emline_data.write(out_fits, format='fits', overwrite=True)
 
-    if silent == False: print '### End fitting.main | '+systime()
+    if silent == False: log.info('### End fitting.main: '+systime())
     return emline_data
 #enddef
 

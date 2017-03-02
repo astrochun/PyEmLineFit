@@ -1,6 +1,6 @@
 """
 execute
-====
+=======
 
 Provide description for code here.
 """
@@ -13,9 +13,9 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
+from astropy import log
 
 import numpy as np
-import array, time, sets
 
 import matplotlib.pyplot as plt
 import glob
@@ -51,7 +51,7 @@ def deep2(silent=False, verbose=True):
      - Added fits_files array
     '''
     
-    if silent == False: print '### Begin execute.deep2 | '+systime()
+    if silent == False: log.info('### Begin execute.deep2 : '+systime())
 
     deep2_path = '/Users/cly/data/DEEP2/DR4/'
 
@@ -82,6 +82,6 @@ def deep2(silent=False, verbose=True):
         
         read_data.main(infiles[ff], init_dict0, OH_file=OH_files[ff],
                        resol='high', out_pdf=pdf_files[ff])
-    if silent == False: print '### End execute.deep2 | '+systime()
+    if silent == False: log.info('### End execute.deep2 : '+systime())
 #enddef
 

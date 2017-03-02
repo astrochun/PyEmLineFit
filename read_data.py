@@ -13,6 +13,7 @@ from os.path import exists
 import commands
 from astropy.io import ascii as asc
 from astropy.io import fits
+from astropy import log
 
 import numpy as np
 
@@ -51,16 +52,16 @@ def OH_flag_arr(OH_file, x0, silent=False, verbose=False):
     Created by Chun Ly, 10 February 2017
     '''
 
-    if silent == True: print '## Reading : ', OH_file
+    if silent == True: log.info('## Reading : '+OH_file)
     OH_data = asc.read(OH_file)
 
     OH_xmin0 = OH_data['col1'].data.tolist()
     OH_xmax0 = OH_data['col2'].data.tolist()
 
     if silent == False:
-        print '## Adding in A- and B-band of atmospheric absorption'
-        OH_xmin0 += [7590.0, 6860.0]
-        OH_xmax0 += [7670.0, 6890.0]
+        log.info('## Adding in A- and B-band of atmospheric absorption')
+    OH_xmin0 += [7590.0, 6860.0]
+    OH_xmax0 += [7670.0, 6890.0]
 
     OH_flag0 = np.zeros(len(x0), dtype=np.int8)
     for oo in range(len(OH_xmin0)):
@@ -106,7 +107,7 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     # Contains information about fitted emission lines
     # Later + on 09/02/2017
     line_fit_file = co_path + 'fit_lines.'+resol+'res.txt'
-    if silent == False: print '### Reading : ', line_fit_file
+    if silent == False: log.info('### Reading : '+line_fit_file)
     fit_data0 = asc.read(line_fit_file, format='commented_header')
 
     if verbose == True: print fit_data0
@@ -246,23 +247,23 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
      - Add out_fits keyword option
     '''
 
-    if silent == False: print '### Begin read_data.main | '+systime()
+    if silent == False: log.info('### Begin read_data.main : '+systime())
 
     # + on 11/02/2017
     if 'dtype' not in init_dict0.keys():
-        print '## dtype not provided in init_dict0!!!'
-        print '## Exiting!!!'
+        log.error('## dtype not provided in init_dict0!!!')
+        log.error('## Exiting!!!')
         return
 
-    if silent == False: print '### Reading : ', infile0
+    if silent == False: log.info('### Reading : '+infile0)
     data0, hdr0 = fits.getdata(infile0, header=True)
 
     # + on 12/02/2017
     if 'LINE' not in init_dict0.keys():
-        if silent == False: print '### Adding default LINE index'
+        if silent == False: log.info('### Adding default LINE index')
         init_dict0['LINE']  = 1+np.arange(len(data0))
         init_dict0['dtype'] = init_dict0['dtype'] + ['i']
-        print init_dict0.keys()
+        if silent == False: log.info(init_dict0.keys())
     line = init_dict0['LINE']
 
     # Mod on 12/02/2017
@@ -272,19 +273,19 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     str_in  = '.fits.gz' if '.gz' in infile0 else '.fits'
     # + on 09/02/2017
     if out_pdf == None: out_pdf = infile0.replace(str_in,'.ELF.pdf')
-    if silent == False: print '### out_pdf : ', out_pdf
+    if silent == False: log.info('### out_pdf : '+out_pdf)
 
     # + on 12/02/2017
     if out_fits == None: out_fits = infile0.replace(str_in,'.ELF.fits')
-    if silent == False: print '### out_fits : ', out_fits
+    if silent == False: log.info('### out_fits : '+out_fits)
 
     l0    = hdr0['CRVAL1'] # Wavelength minimum
     dl    = hdr0['CDELT1'] # Wavelength dispersion
     n_pix = hdr0['NAXIS1'] # Number of pixels
     if silent == False:
-        print '## Minimum wavelength : ', l0
-        print '## Wavelength dispersion : ', dl
-        print '## Number of spectral pixels : ', n_pix
+        log.info('## Minimum wavelength : %f' % l0)
+        log.info('## Wavelength dispersion : %f' % dl)
+        log.info('## Number of spectral pixels : %i' % n_pix)
 
     x0 = l0 + dl * np.arange(n_pix)
 
@@ -312,8 +313,8 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
 
     # + on 09/02/2017. Mod on 11/02/2017
     init_tags = init_dict0.keys()[1:]
+    if silent == False: log.info('### Filling in : '+", ".join(init_tags))
     for tag in init_tags:
-        if silent == False: print '### Filling in : ', tag
         if tag in tagnames: emline_data[tag] = init_dict0[tag]
 
     # Mod on 12/02/2017 to include line_type
@@ -327,6 +328,6 @@ def main(infile0, init_dict0, OH_file=None, resol='low', out_pdf=None,
     emline_data = fitting.main(dict0, out_pdf, out_fits, silent=silent,
                                verbose=verbose)
 
-    if silent == False: print '### End read_data.main | '+systime()
+    if silent == False: log.info('### End read_data.main : '+systime())
 #enddef
 
