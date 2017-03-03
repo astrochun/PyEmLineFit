@@ -315,31 +315,32 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                     fit_annot = ['', 'mod = ', 'data = ', r'$\sigma$ = ',
                                  'S/N = ', r'W$_{\rm abs}$ = ']
 
-                # + on 14/02/2017
-                box_reg  = np.where((x0 >= z_lines[s_idx] - 100) &
-                                    (x0 <= z_lines[s_idx] + 100))[0]
+                    # Moved up on 02/03/2017
+                    in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
+                    in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
+                                         (OH_flag0 == 0))[0]
 
+                    # Moved up on 02/03/2017
+                    px = psk.units.SpectroscopicAxis(x0[in_range],
+                                                     unit='angstroms')
+                    bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
+
+                # + on 14/02/2017
+                box_reg  = np.where((x0 >= (z_lines[s_idx]-100)) &
+                                    (x0 <= (z_lines[s_idx]+100)))[0]
                 box_reg2 = np.where((x0 >= (z_lines[s_idx]-100)) &
                                     (x0 <= (z_lines[s_idx]+100)) &
                                     (line_flag == 0) & (OH_flag0 == 0) &
                                     (y0 != 0.0))[0]
 
-                in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
-                in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
-                                     (OH_flag0 == 0))[0]
-
                 # + on 14/02/2017
                 sig0 = np.std(y0[box_reg2]) # Mask em lines - Mod on 02/03/2017
-                #med0 = np.median(y0[box_reg2])
 
-                px = psk.units.SpectroscopicAxis(x0[in_range], unit='angstroms')
                 # Mod on 19/02/2017. Do not remove median
                 sp = psk.Spectrum(data=y0[in_range], xarr=px,
                                   error=np.repeat(sig0,len(in_range)))
 
                 # Perform baseline fitting | + on 19/02/2017, Mod on 02/03/2017
-                bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
-
                 sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
 
                 cont_spec = sp.baseline.basespec # Mod on 02/03/2017
