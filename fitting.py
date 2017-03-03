@@ -31,7 +31,7 @@ from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
 import pyspeckit as psk # + on 13/02/2017
 
-sig_sum = 2.5 # + on 01/03/2017
+sigma_sum = 2.5 # + on 01/03/2017
 
 def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     '''
@@ -200,6 +200,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Define OH_dict0 from dict0
      - Pass OH_dict0 to get_bl_exclude()
      - Remove continuum from fit for computing residual spectrum
+     - Use box_reg2 for sig0 computation
+     - Compute S/N of emission lines
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -249,7 +251,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
         y0 = data0[line[ll]-1]
 
         # Fill in LMIN/LMAX values, range of spectrum
-        l_mark = np.where(y0 > 0)[0]
+        l_mark = np.where(y0 != 0)[0] # Mod on 02/03/2017
         if len(l_mark) > 0:
             lmin, lmax = np.min(x0[l_mark]), np.max(x0[l_mark])
             emline_data['LMIN'][ll]  = lmin
@@ -317,8 +319,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 box_reg  = np.where((x0 >= z_lines[s_idx] - 100) &
                                     (x0 <= z_lines[s_idx] + 100))[0]
 
-                box_reg2 = np.where((x0 >= z_lines[s_idx] - 100) &
-                                    (x0 <= z_lines[s_idx] + 100) &
+                box_reg2 = np.where((x0 >= (z_lines[s_idx]-100)) &
+                                    (x0 <= (z_lines[s_idx]+100)) &
                                     (line_flag == 0) & (OH_flag0 == 0) &
                                     (y0 != 0.0))[0]
 
@@ -327,7 +329,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                                      (OH_flag0 == 0))[0]
 
                 # + on 14/02/2017
-                sig0 = np.std(y0[in_range2])
+                sig0 = np.std(y0[box_reg2]) # Mask em lines - Mod on 02/03/2017
                 #med0 = np.median(y0[box_reg2])
 
                 px = psk.units.SpectroscopicAxis(x0[in_range], unit='angstroms')
@@ -351,8 +353,13 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 lambdaC = sp.specfit.parinfo['SHIFT0'].value # + on 01/03/2017
 
                 # Mod on 02/03/2017 for indexing
-                sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)<=sig_sum*sigG))[0]
+                sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)
+                                           <= sigma_sum*sigG))[0]
                 flux_sum = dl * np.sum(y0[in_range[sum_arr]]-cont_spec[sum_arr])
+
+                # + on 02/03/2017
+                sig_sum = sig0 * dl * np.sqrt(sigma_sum*2*sigG/dl)
+                SNR = flux_sum/sig_sum
 
                 # + on 22/02/2017
                 y_mod = sp.specfit.get_model(x0[in_range])
@@ -364,7 +371,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 # Plot residuals - orange solid line | + on 01/03/2017
                 # Mod on 02/03/2017 to remove continuum from y_resid
-                temp = np.where(np.abs(x0[in_range]-lambdaC)/sigG <= sig_sum)[0]
+                temp = np.where(np.abs(x0[in_range]-lambdaC)/sigG <= sigma_sum)[0]
                 y_resid = sp.data[temp] - (y_mod[temp]-cont_spec[temp])
                 t_ax0.plot(x0[in_range[temp]], y_resid, '-', color='orange')
 
@@ -374,6 +381,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 fit_annot[3] += s_com+'%.2f' % sigG
                 fit_annot[1] += s_com+'%.2f' % (flux_mod/cgsflux) # + on 02/03/2017
                 fit_annot[2] += s_com+'%.2f' % (flux_sum/cgsflux) # + on 02/03/2017
+                fit_annot[4] += s_com+'%.2f' % SNR # + on 02/03/2017
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
@@ -412,7 +420,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 #           zorder=1)
 
                 # Plot -2.5,2.5sig as dotted black lines | + on 02/03/2017
-                for t_val in sig_sum*sigG*np.array([-1,1]):
+                for t_val in sigma_sum*sigG*np.array([-1,1]):
                     t_ax0.axvline(x=lambdaC+t_val, color='k', linewidth=0.5,
                                   linestyle=':')
 
