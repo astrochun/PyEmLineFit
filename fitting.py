@@ -33,6 +33,9 @@ import pyspeckit as psk # + on 13/02/2017
 
 sigma_sum = 2.5 # + on 01/03/2017
 
+cols = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0', 'FLUX', 'FLUX_ERR',
+        'FLUX_DATA', 'NOISE', 'SNR']
+
 def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     '''
     Shade wavelengths affected by OH night skylines
@@ -349,9 +352,11 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
                 sp.specfit(fittype='gaussian', guesses=guess)
 
+                A = sp.specfit.parinfo # Best fit | + 02/03/2017
+
                 # + on 19/02/2017
-                sigG    = sp.specfit.parinfo['WIDTH0'].value
-                lambdaC = sp.specfit.parinfo['SHIFT0'].value # + on 01/03/2017
+                sigG    = A['WIDTH0'].value
+                lambdaC = A['SHIFT0'].value # + on 01/03/2017
 
                 # Mod on 02/03/2017 for indexing
                 sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)
@@ -383,6 +388,14 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                 fit_annot[1] += s_com+'%.2f' % (flux_mod/cgsflux) # + on 02/03/2017
                 fit_annot[2] += s_com+'%.2f' % (flux_sum/cgsflux) # + on 02/03/2017
                 fit_annot[4] += s_com+'%.2f' % SNR # + on 02/03/2017
+
+                # Update emline_data with results | + on 02/03/2017
+                t_tags = [fit_data0['lines_txt'][s_idx]+'_'+c for c in cols]
+                t_val  = [lambdaC, lambdaC/ss_line0-1, A['AMPLITUDE0'].value,
+                          sigG, 0.0, flux_mod, flux_mod/SNR, flux_sum, sig0,
+                          SNR]
+                for aa,bb in zip(t_tags,t_val):
+                    emline_data[aa][ll] = bb
 
                 # Mod on 10/02/2017
                 if panel_check: #Do this once for each panel
