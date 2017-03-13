@@ -3,6 +3,35 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pyspeckit as psk
 
+from pyspeckit import models
+
+#class OII_gauss(xarr, r_peak, r_center, r_sigma, b_peak, b_sigma):
+def OII_gauss(xarr, r_peak, r_center, r_sigma, b_peak, b_sigma):
+    # + on 13/03/2017
+    xarr = np.array(xarr)
+
+    b_center = r_center * 1.00074
+
+    r_gauss = r_peak * np.exp(-(xarr-r_center)**2/(2*r_sigma**2))
+    b_gauss = b_peak * np.exp(-(xarr-b_center)**2/(2*b_sigma**2))
+
+    #def __init__():
+    #    self.npars = 4
+    #    self.npeaks = 2
+
+    return r_gauss + b_gauss
+
+# + on 13/03/2017
+OII_parnames = ['r_peak', 'r_center', 'r_sigma', 'b_peak', 'b_center']
+parlimited=[(True,False),(True,True),(True,False),(True,False),(True,True)]
+parlimits=[(0,0), (0,0), (0,0), (0,0), (0,0)]
+
+# + on 13/03/2017
+OII_gauss_fitter = models.model.SpectralModel(OII_gauss, 5, parnames=OII_parnames,
+                                              parlimited=parlimited, parlimits=parlimits)
+
+
+# OII_fitter = psk.models.model.SpectralModel(OIIFitter, 5,
 def get_exclude(z_lines, w=5):
     # Mod on 02/03/2017 to improve efficiency for exclude list definition
     listoflist = [[a,b] for a,b in zip(z_lines-w,z_lines+w)]
@@ -77,6 +106,73 @@ def test():
 
     fig = plt.gcf()
     fig.savefig('test.pdf')
+    #fig.close()
+
+    #plt.show()
+
+    return sp
+#endef
+
+def test_OII():
+    infile0 = '/Users/cly/data/DEEP2/DR4/DEEP2_2D_Field1.f3.fits'
+
+    data0, hdr0 = fits.getdata(infile0, header=True)
+
+    x0 = hdr0['CRVAL1'] + hdr0['CDELT1']*np.arange(hdr0['NAXIS1'])
+    y0 = data0[4]
+
+    lines = np.array([3726.16, 3728.91])
+    zspec = 0.7835
+
+    z_lines = lines * (1+zspec)
+    z_line  = z_lines[1]
+
+    box_reg = np.where((x0 >= z_line - 100) & (x0 <= z_line + 100))[0]
+
+    sig0 = np.std(y0[box_reg])
+
+    print sig0 #, med0
+    px = psk.units.SpectroscopicAxis(x0[box_reg], unit='angstroms')
+
+    y0 = y0 # - med0
+    sp = psk.Spectrum(data=y0[box_reg], xarr=px, unit='erg/s/cm2/Ang',
+                      error=np.repeat(sig0,len(box_reg)))
+
+    print 'before : ', np.min(sp.data), np.max(sp.data)
+    exclude = get_exclude(z_lines)
+    print len(exclude)
+    print exclude
+
+    sp.baseline(annotate=True, subtract=False, exclude=exclude)
+    print 'after : ', np.min(sp.data), np.max(sp.data)
+
+    med0 = sp.baseline.basespec
+
+    sp.Registry.add_fitter('OII_gauss', OII_gauss_fitter, 5)
+    sp.specfit.register_fitter(name='OII_gauss', function=OII_gauss_fitter, npars=5)
+
+    guess = [np.max(y0[box_reg]), z_lines[1], 1.0, 0.7*np.max(y0[box_reg]), 1.0]
+    #guess = [y0[box_reg].max(), z_line, 1.0]
+    #print guess
+    limits = [(0,0), (z_lines[1]-2,z_lines[1]+2), (0,5), (0,0), (0,5)]
+    sp.specfit(fittype='OII_gauss', guesses=guess, limits=limits)
+    print sp.specfit.parinfo
+
+    fig, ax = plt.subplots()
+    print type(ax)
+    sp.plotter(ax)
+
+    sp.specfit.plot_fit()
+
+    ax.plot(x0,y0)
+
+    sp.baseline.plot_baseline(annotate=True, linewidth=2)
+    cont_arr = sp.baseline.get_model(px) #x0[box_reg])
+
+    ax.set_xlim([6600,6700])
+
+    fig = plt.gcf()
+    fig.savefig('test_OII.pdf')
     #fig.close()
 
     #plt.show()
