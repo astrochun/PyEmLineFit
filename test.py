@@ -5,6 +5,16 @@ import pyspeckit as psk
 
 from pyspeckit import models
 
+infile0 = '/Users/cly/data/DEEP2/DR4/DEEP2_2D_Field1.f3.fits'
+
+data0, hdr0 = fits.getdata(infile0, header=True)
+
+x0 = hdr0['CRVAL1'] + hdr0['CDELT1']*np.arange(hdr0['NAXIS1'])
+y0 = data0[4]
+
+zspec = 0.7835
+
+
 #class OII_gauss(xarr, r_peak, r_center, r_sigma, b_peak, b_sigma):
 def OII_gauss(xarr, r_peak, r_center, r_sigma, b_peak, b_sigma):
     # + on 13/03/2017
@@ -28,7 +38,8 @@ parlimits=[(0,0), (0,0), (0,0), (0,0), (0,0)]
 
 # + on 13/03/2017
 OII_gauss_fitter = models.model.SpectralModel(OII_gauss, 5, parnames=OII_parnames,
-                                              parlimited=parlimited, parlimits=parlimits)
+                                              parlimited=parlimited, parlimits=parlimits,
+                                              fitunits='angstrom')
 
 
 # OII_fitter = psk.models.model.SpectralModel(OIIFitter, 5,
@@ -45,15 +56,7 @@ def get_exclude(z_lines, w=5):
     return exclude.tolist()
 
 def test():
-    infile0 = '/Users/cly/data/DEEP2/DR4/DEEP2_2D_Field1.f3.fits'
-
-    data0, hdr0 = fits.getdata(infile0, header=True)
-
-    x0 = hdr0['CRVAL1'] + hdr0['CDELT1']*np.arange(hdr0['NAXIS1'])
-    y0 = data0[4]
-
     lines = np.array([4958.91, 5006.84])
-    zspec = 0.7835
 
     z_lines = lines * (1+zspec)
     z_line  = z_lines[1]
@@ -114,15 +117,7 @@ def test():
 #endef
 
 def test_OII():
-    infile0 = '/Users/cly/data/DEEP2/DR4/DEEP2_2D_Field1.f3.fits'
-
-    data0, hdr0 = fits.getdata(infile0, header=True)
-
-    x0 = hdr0['CRVAL1'] + hdr0['CDELT1']*np.arange(hdr0['NAXIS1'])
-    y0 = data0[4]
-
     lines = np.array([3726.16, 3728.91])
-    zspec = 0.7835
 
     z_lines = lines * (1+zspec)
     z_line  = z_lines[1]
@@ -179,3 +174,51 @@ def test_OII():
 
     return sp
 #endef
+
+def test_single():
+    lines   = np.array([4861.32, 4958.91, 5006.84])
+    z_lines = lines * (1+zspec)
+
+    OIII5007 = z_lines[2]
+    OIII4959 = z_lines[1]
+    Hbeta    = z_lines[0]
+    sig0 = np.std(y0)
+    px = psk.units.SpectroscopicAxis(x0, unit='angstroms')
+
+    sp = psk.Spectrum(data=y0, xarr=px, unit='erg/s/cm2/Ang',
+                      error=np.repeat(sig0, len(y0)))
+
+    exclude = get_exclude(z_lines)
+    print len(exclude)
+    sp.baseline(annotate=True, subtract=False, exclude=exclude)
+
+    #Hbeta sp.specfit.selectregion(xmin=Hbeta-10, xmax=Hbeta+10)
+    ampHb = np.max(sp.data[sp.specfit.xmin:sp.specfit.xmax])
+
+    #OIII4959
+    sp.specfit.selectregion(xmin=OIII4959-10, xmax=OIII4959+20)
+    amp4959 = np.max(sp.data[sp.specfit.xmin:sp.specfit.xmax])
+
+    #OIII5007
+    sp.specfit.selectregion(xmin=OIII5007-10, xmax=OIII5007+20)
+    amp5007 = np.max(sp.data[sp.specfit.xmin:sp.specfit.xmax])
+
+    guess = [ampHb, Hbeta, 1.0, amp4959, OIII4959, 1.0,
+             amp5007, OIII5007, 1.0]
+
+    fig, ax = plt.subplots()
+    sp.plotter(ax)
+
+    sp.specfit(guesses=guess, negamp=False, quiet=True,
+               show_components=True)
+    print sp.specfit.parinfo
+
+    sp.baseline.plot_baseline(annotate=True, linewidth=2)
+
+    sp.plotter.axis.set_xlim(8600,9200)
+    # sp.specfit.plot_fit()
+
+    fig = plt.gcf()
+    fig.savefig('test_single.pdf')
+
+#enddef
