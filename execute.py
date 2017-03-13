@@ -62,7 +62,7 @@ def deep2(silent=False, verbose=True):
     pdf_files  = [str0.replace('.fits','.ELF.pdf') for str0 in infiles]
     fits_files = [str0.replace('.fits','.ELF.fits') for str0 in infiles]
 
-    for ff in xrange(len(infiles)):
+    for ff in [0]: #xrange(len(infiles)):
         cat_data = fits.getdata(cat_files[ff])
 
         objno = cat_data.OBJNO

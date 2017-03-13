@@ -173,7 +173,7 @@ def test_OII():
     #plt.show()
 
     return sp
-#endef
+#enddef
 
 def test_single():
     lines   = np.array([4861.32, 4958.91, 5006.84])
@@ -192,7 +192,8 @@ def test_single():
     print len(exclude)
     sp.baseline(annotate=True, subtract=False, exclude=exclude)
 
-    #Hbeta sp.specfit.selectregion(xmin=Hbeta-10, xmax=Hbeta+10)
+    #Hbeta
+    sp.specfit.selectregion(xmin=Hbeta-10, xmax=Hbeta+10)
     ampHb = np.max(sp.data[sp.specfit.xmin:sp.specfit.xmax])
 
     #OIII4959
@@ -221,4 +222,63 @@ def test_single():
     fig = plt.gcf()
     fig.savefig('test_single.pdf')
 
+#enddef
+
+def test_OII_double():
+    lines = np.array([3726.16, 3728.91])
+
+    z_lines = lines * (1+zspec)
+    z_line  = z_lines[1]
+
+    box_reg = np.where((x0 >= z_line - 100) & (x0 <= z_line + 100))[0]
+    y0 = data0[4]
+    sig0 = np.std(y0[box_reg])
+
+    print sig0 #, med0
+    px = psk.units.SpectroscopicAxis(x0[box_reg], unit='angstroms')
+
+    y0 = y0 # - med0
+    sp = psk.Spectrum(data=y0[box_reg], xarr=px, unit='erg/s/cm2/Ang',
+                      error=np.repeat(sig0,len(box_reg)))
+
+    print 'before : ', np.min(sp.data), np.max(sp.data)
+    exclude = get_exclude(z_lines)
+    print len(exclude)
+    print exclude
+
+    sp.baseline(annotate=True, subtract=False, exclude=exclude)
+    print 'after : ', np.min(sp.data), np.max(sp.data)
+
+    med0 = sp.baseline.basespec
+
+    sp.specfit.selectregion(xmin=z_lines[0]-10, xmax=z_lines[0]+10)
+    ampOII = np.max(sp.data[sp.specfit.xmin:sp.specfit.xmax])
+
+    guess = [ampOII, z_lines[1], 1.0, ampOII*0.75, z_lines[0], 1.0]
+    tied  = ['', '', '', '', 'p[1]/{0}'.format(1.00074)]
+
+    sp.specfit(guesses=guess, negamp=False, quiet=True,
+               show_components=True)
+    print sp.specfit.parinfo
+
+    fig, ax = plt.subplots()
+    print type(ax)
+    sp.plotter(ax)
+
+    sp.specfit.plot_fit()
+
+    ax.plot(x0,y0)
+
+    sp.baseline.plot_baseline(annotate=True, linewidth=2)
+    cont_arr = sp.baseline.get_model(px) #x0[box_reg])
+
+    ax.set_xlim([6600,6700])
+
+    fig = plt.gcf()
+    fig.savefig('test_OII_double.pdf')
+    #fig.close()
+
+    #plt.show()
+
+    return sp
 #enddef
