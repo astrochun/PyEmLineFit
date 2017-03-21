@@ -138,6 +138,18 @@ def get_bl_exclude(z_lines, w=5, OH_dict0=None, silent=True, verbose=False):
     return exclude
 #enddef
 
+def running_std(x0, y0, line_flag, OH_flag0, window=100.0):
+    sig0_arr = np.zeros(len(x0))
+
+    for ss in xrange(len(x0)):
+        box_reg = np.where((x0 >= x0[ss]-window) & (x0 <= x0[ss]+window) &
+                           (line_flag == 0) & (OH_flag0 == 0) &
+                           (y0 != 0.0))[0]
+        if len(box_reg) > 0:
+            sig0_arr[ss] = np.std(y0[box_reg])
+    return sig0_arr
+#enddef
+
 def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     '''
     Run pyspeckit on each target
@@ -304,11 +316,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
             px = psk.units.SpectroscopicAxis(x0, unit='angstroms')
             bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
 
-            box_reg2 = np.where((line_flag == 0) & (OH_flag0 == 0) &
-                                (y0 != 0.0))[0]
-
-            sig0 = np.std(y0[box_reg2])
-            sp   = psk.Spectrum(data=y0, xarr=px, error=np.repeat(sig0,len(y0))
+            sig0_arr = running_std(x0, y0, line_flag, OH_flag0, window=100.0)
+            sp   = psk.Spectrum(data=y0, xarr=px, error=sig0_arr)
 
             # Perform baseline fitting | Moved up on 21/03/2017
             sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
@@ -333,6 +342,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
                              'S/N = ', r'W$_{\rm abs}$ = ']
 
                 t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
+                t_ax0.plot(x0, sig0_arr, 'r--', linewidth=0.75, zorder=5)
                 t_ax0.set_xlim(xra)
 
                 in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
