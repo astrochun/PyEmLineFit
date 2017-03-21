@@ -31,7 +31,7 @@ from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
 import pyspeckit as psk # + on 13/02/2017
 
-from . import cols # + on 20/03/2017
+from . import cols
 
 sigma_sum = 2.5 # + on 01/03/2017
 
@@ -140,7 +140,7 @@ def get_bl_exclude(z_lines, w=5, OH_dict0=None, silent=True, verbose=False):
 
 def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     '''
-    Run pyspeckit on each target
+    Provide explanation for function here.
 
     Parameters
     ----------
@@ -204,8 +204,6 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Remove continuum from fit for computing residual spectrum
      - Use box_reg2 for sig0 computation
      - Compute S/N of emission lines
-    Modified by Chun Ly, 21 March 2017
-     - Revamp of code to handle multi-line fitting
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -300,79 +298,156 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
             label0 += ' z=%6.4f %.1f-%.1f' % (zspec0[ll], lmin, lmax)
             ax_arr[0,0].set_title(label0, loc=u'left', fontsize=14)
 
-            # Moved up on 21/03/2017
-            px = psk.units.SpectroscopicAxis(x0, unit='angstroms')
-            bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
+            for ss in xrange(len(in_spec)):
+                s_idx = in_spec[ss] # + on 10/02/2017
+                panel_check = 1 if ss == 0 else 0
 
-            box_reg2 = np.where((line_flag == 0) & (OH_flag0 == 0) &
-                                (y0 != 0.0))[0]
+                ss_panel = fit_data0['panels'][s_idx] # + on 12/02/2017
+                ss_line0 = fit_data0['lines0'][s_idx] # + on 01/03/2017
+                if ss != 0:
+                    panel_check = ss_panel - fit_data0['panels'][in_spec[ss-1]]
 
-            sig0 = np.std(y0[box_reg2])
-            sp   = psk.Spectrum(data=y0, xarr=px, error=np.repeat(sig0,len(y0))
-
-            # Perform baseline fitting | Moved up on 21/03/2017
-            sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
-
-            cont_spec = sp.baseline.basespec # Mod on 02/03/2017
-
-            #guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
-            #sp.specfit(fittype='gaussian', guesses=guess)
-            #A = sp.specfit.parinfo # Best fit | + 02/03/2017
-
-            a_panels = fit_data0['panels'][in_spec]
-            i_panels = [idx for idx, item in enumerate(a_panels) if
-                        item not in a_panels[:idx]] # Unique index
-
-            ss_panels = list(set(a_panels))
-            for ss_panel,s_idx in zip(ss_panels,i_panels):
                 t_col, t_row = ss_panel % ncols, ss_panel / ncols
+
                 t_ax0 = ax_arr[t_row,t_col] #Moved up on 10/02/2017
 
-                xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
-                fit_annot = ['', 'mod = ', 'data = ', r'$\sigma$ = ',
-                             'S/N = ', r'W$_{\rm abs}$ = ']
+                if panel_check:
+                    xra = [x_min[s_idx], x_min[s_idx]+2*xwidth[s_idx]]
+                    # + on 18/02/2017
+                    fit_annot = ['', 'mod = ', 'data = ', r'$\sigma$ = ',
+                                 'S/N = ', r'W$_{\rm abs}$ = ']
 
-                t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
-                t_ax0.set_xlim(xra)
+                    # Moved up on 02/03/2017
+                    in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
+                    in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
+                                         (OH_flag0 == 0))[0]
 
-                in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
-                in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
-                                     (OH_flag0 == 0))[0]
+                    # Moved up on 02/03/2017
+                    px = psk.units.SpectroscopicAxis(x0[in_range],
+                                                     unit='angstroms')
+                    bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
 
-                # Adjust y-range
-                t1  = np.min(y0[in_range2])
-                yra = [1.1*t1 if t1 < 0 else 0.0, 1.1*np.max(y0[in_range2])]
-                t_ax0.set_ylim(yra)
-                t_ax0.yaxis.set_ticklabels([])
-                t_ax0.tick_params(axis='both', which='major', labelsize=10)
-                t_ax0.minorticks_on()
+                # + on 14/02/2017
+                box_reg  = np.where((x0 >= (z_lines[s_idx]-100)) &
+                                    (x0 <= (z_lines[s_idx]+100)))[0]
+                box_reg2 = np.where((x0 >= (z_lines[s_idx]-100)) &
+                                    (x0 <= (z_lines[s_idx]+100)) &
+                                    (line_flag == 0) & (OH_flag0 == 0) &
+                                    (y0 != 0.0))[0]
 
-                # Draw OH skyline | + on 10/02/2017
-                if has_OH: draw_OH(OH_dict0, t_ax0, xra, yra)
+                # + on 14/02/2017
+                sig0 = np.std(y0[box_reg2]) # Mask em lines - Mod on 02/03/2017
 
-                # Draw horizontal line at y=0
-                t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
+                # Mod on 19/02/2017. Do not remove median
+                sp = psk.Spectrum(data=y0[in_range], xarr=px,
+                                  error=np.repeat(sig0,len(in_range)))
 
-                in_panel = np.where(fit_data0['panels'] == ss_panel)[0]
+                # Perform baseline fitting | + on 19/02/2017, Mod on 02/03/2017
+                sp.baseline(annotate=False, subtract=False, exclude=bl_exclude)
 
-                # Label lines for each panel
-                line_annot = '\n'.join([a for a in
-                                        fit_data0['lines_greek'][in_panel]])
-                t_ax0.annotate(line_annot, (0.95,0.95), ha='right', va='top',
+                cont_spec = sp.baseline.basespec # Mod on 02/03/2017
+                # print '## med0 : ', med0
+
+                guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
+                sp.specfit(fittype='gaussian', guesses=guess)
+
+                A = sp.specfit.parinfo # Best fit | + 02/03/2017
+
+                # + on 19/02/2017
+                sigG    = A['WIDTH0'].value
+                lambdaC = A['SHIFT0'].value # + on 01/03/2017
+
+                # Mod on 02/03/2017 for indexing
+                sum_arr  = np.where(np.abs((x0[in_range]-lambdaC)
+                                           <= sigma_sum*sigG))[0]
+                flux_sum = dl * np.sum(y0[in_range[sum_arr]]-cont_spec[sum_arr])
+
+                # + on 02/03/2017
+                sig_sum = sig0 * dl * np.sqrt(sigma_sum*2*sigG/dl)
+                SNR = flux_sum/sig_sum
+
+                # + on 22/02/2017
+                y_mod = sp.specfit.get_model(x0[in_range])
+                t_ax0.plot(x0[in_range], y_mod, 'r--', linewidth=1, zorder=6)
+                # sp.plotter(t_ax0)
+                # sp.specfit.plot_fit()
+
+                flux_mod = np.sum((y_mod-cont_spec)*dl) # + on 02/03/2017
+
+                # Plot residuals - orange solid line | + on 01/03/2017
+                # Mod on 02/03/2017 to remove continuum from y_resid
+                temp = np.where(np.abs(x0[in_range]-lambdaC)/sigG <= sigma_sum)[0]
+                y_resid = sp.data[temp] - (y_mod[temp]-cont_spec[temp])
+                t_ax0.plot(x0[in_range[temp]], y_resid, '-', color='orange')
+
+                # + on 19/02/2017
+                s_com = ', ' if fit_annot[0] != '' else ''
+                fit_annot[0] += s_com+'%.1f' % lambdaC
+                fit_annot[3] += s_com+'%.2f' % sigG
+                fit_annot[1] += s_com+'%.2f' % (flux_mod/cgsflux) # + on 02/03/2017
+                fit_annot[2] += s_com+'%.2f' % (flux_sum/cgsflux) # + on 02/03/2017
+                fit_annot[4] += s_com+'%.2f' % SNR # + on 02/03/2017
+
+                # Update emline_data with results | + on 02/03/2017
+                t_tags = [fit_data0['lines_txt'][s_idx]+'_'+c for c in cols]
+                t_val  = [lambdaC, lambdaC/ss_line0-1, A['AMPLITUDE0'].value,
+                          sigG, 0.0, flux_mod, flux_mod/SNR, flux_sum, sig0,
+                          SNR]
+                for aa,bb in zip(t_tags,t_val):
+                    emline_data[aa][ll] = bb
+
+                # Mod on 10/02/2017
+                if panel_check: #Do this once for each panel
+                    t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
+                    t_ax0.set_xlim(xra)
+
+                    # Adjust y-range
+                    t1  = np.min(y0[in_range2])
+                    yra = [1.1*t1 if t1 < 0 else 0.0, 1.1*np.max(y0[in_range2])]
+                    t_ax0.set_ylim(yra)
+                    t_ax0.yaxis.set_ticklabels([])
+                    t_ax0.tick_params(axis='both', which='major', labelsize=10)
+                    t_ax0.minorticks_on()
+
+                    # Draw OH skyline | + on 10/02/2017
+                    if has_OH: draw_OH(OH_dict0, t_ax0, xra, yra)
+
+                    # Draw horizontal line at y=0
+                    t_ax0.axhline(y=0.0, linewidth=1, color='b', zorder=1)
+
+                    # Annotate emission lines in the UR panel | + on 12/02/2017
+                    # Mod on 01/03/2017 to simplify indexing
+                    in_panel = np.where(fit_data0['panels'] == ss_panel)[0]
+                    # in_panel = in_spec[in_panel]
+
+                    # Label lines for each panel
+                    line_annot = '\n'.join([a for a in
+                                            fit_data0['lines_greek'][in_panel]])
+                    t_ax0.annotate(line_annot, (0.95,0.95), ha='right', va='top',
                                    xycoords='axes fraction', bbox=bbox_props,
                                    zorder=6, fontsize=10)
 
+                # Plot continuum | Mod on 02/03/2017
+                #t_ax0.axhline(y=med0, linewidth=2, color='g', zorder=1)
+                #t_ax0.plot(x0[in_range], cont_spec, linewidth=2, color='g',
+                #           zorder=1)
+
+                # Plot -2.5,2.5sig as dotted black lines | + on 02/03/2017
+                for t_val in sigma_sum*sigG*np.array([-1,1]):
+                    t_ax0.axvline(x=lambdaC+t_val, color='k', linewidth=0.5,
+                                  linestyle=':')
+
                 # Draw vertical lines for emission lines | + on 10/02/2017
-                for ip in in_panel:
-                    t_ax0.axvline(x=z_lines[ip], linewidth=1, color='b',
-                                  zorder=1)
+                t_ax0.axvline(x=z_lines[s_idx], linewidth=1, color='b',
+                              zorder=1)
 
                 # Annotate results of fit | + on 18/02/2017
                 # Moved lower on 19/02/2017
-                fit_annot0 = '\n'.join([a for a in fit_annot])
-                t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left', va='top',
-                               xycoords='axes fraction', color='orange',
-                               bbox=bbox_props, zorder=6, fontsize=8)
+                if ss_line0 == fit_data0['lines0'][in_panel[-1]]:
+                    fit_annot0 = '\n'.join([a for a in fit_annot])
+                    t_ax0.annotate(fit_annot0, (0.025,0.975), ha='left', va='top',
+                                   xycoords='axes fraction', color='orange',
+                                   bbox=bbox_props, zorder=6, fontsize=8)
             #endfor
 
             # Remove plotting of non-use panels | + on 10/02/2017, Mod on 12/02/2017
