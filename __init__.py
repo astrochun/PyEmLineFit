@@ -16,10 +16,12 @@ How to use the documentation
 import PyEmLineFit as ELF
 """
 
+# + on 20-21/03/2017
 cols = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0', 'FLUX', 'FLUX_ERR',
         'FLUX_DATA', 'NOISE', 'SNR']
+c_dtype = ['f8','f8','e','f8','e','e','e','e','e','f8']
 
-__all__ = ['cols']
+__all__ = ['cols', 'c_dtype']
 
 __version__ = '0.1'
 

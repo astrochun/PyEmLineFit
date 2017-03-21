@@ -24,7 +24,7 @@ from astropy.table import Table
 
 import fitting
 
-from . import cols
+from . import cols, c_dtype # + on 21-20/03/2017
 
 co_filename = __file__
 co_path     = os.path.dirname(co_filename) + '/'
@@ -124,10 +124,6 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     #if SDF == True:
     #    tagnames = ['AP', 'LINE', 'ZSPEC']
     #    dtype    = ['S10', 'i', 'f8']
-
-    # cols    = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0',
-    #           'FLUX', 'FLUX_ERR', 'FLUX_DATA', 'NOISE', 'SNR']
-    c_dtype = ['f8','f8','e','f8','e','e','e','e','e','f8']
 
     if resol == 'high':
         t_tags     = ['OII_3727_'+str0 for str0 in cols]
