@@ -21,6 +21,8 @@ cols = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0', 'FLUX', 'FLUX_ERR',
 
 __all__ = ['cols']
 
+__version__ = '0.1'
+
 import read_data
 import fitting
 import execute
