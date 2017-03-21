@@ -139,6 +139,36 @@ def get_bl_exclude(z_lines, w=5, OH_dict0=None, silent=True, verbose=False):
 #enddef
 
 def running_std(x0, y0, line_flag, OH_flag0, window=100.0):
+    '''
+    Provide list with minimum and maximum exclusion
+
+    Parameters
+    ----------
+    x0 : list or numpy.array
+      Observed wavelength in Angstrom
+
+    y0 : list or numpy.array
+      Flux in erg/s/cm2/AA
+
+    line_flag : list or numpy.array
+      Flag array of 0: (no flag) 1: (flagged as emission-line contamination)
+
+    OH_flag0 : list or numpy.array
+      Flag array of 0: (no flag) 1: (flagged as OH skyline contamination)
+
+    window : integer
+      Window size in Angstrom. The window will be -/+ window
+      Default: 100 Angstrom
+
+    Returns
+    -------
+    sig0_arr : list or numpy.array
+
+    Notes
+    -----
+    Created by Chun Ly, 21 March 2017
+    '''
+
     sig0_arr = np.zeros(len(x0))
 
     for ss in xrange(len(x0)):
@@ -147,7 +177,58 @@ def running_std(x0, y0, line_flag, OH_flag0, window=100.0):
                            (y0 != 0.0))[0]
         if len(box_reg) > 0:
             sig0_arr[ss] = np.std(y0[box_reg])
+        else:
+            sig0_arr[ss] = np.inf
     return sig0_arr
+#enddef
+
+def parinfo(x0, y0, OH_flag0, z_lines, fit_data0, in_spec):
+    '''
+    Provide list with minimum and maximum exclusion
+
+    Parameters
+    ----------
+    x0 : list or numpy.array
+      Observed wavelength in Angstrom
+
+    y0 : list or numpy.array
+      Flux in erg/s/cm2/AA
+
+    OH_flag0 : list or numpy.array
+      Flag array of 0: (no flag) 1: (flagged as OH skyline contamination)
+
+    z_lines : list or numpy.array
+      Redshifted wavelength of emission lines
+
+    fit_data0 : astropy.table.Table
+      Astropy Table containing emission lines to be fitted
+
+    in_spec : list or numpy.array
+      Index array indicating which emission line are within the spectral range
+
+    Returns
+    -------
+    sig0_arr : list or numpy.array
+
+    Notes
+    -----
+    Created by Chun Ly, 21 March 2017
+    '''
+
+    guess  = []
+    limits = []
+    tied   = []
+    for ss in in_spec:
+        in_range2 = np.where((x0 >= z_lines[ss]-20) & (x0 <= z_lines[ss]+20) &
+                             (OH_flag0 == 0))[0]
+
+        max0 = np.max(y0[in_range2])
+        if fit_data0['lines_txt'][ss] == 'OII_3726': max0 *= 0.75
+
+        guess  += [max0, z_lines[ss], 1.0]
+        limits += [(0,0), (z_lines[ss]-2,z_lines[ss]+2), (0,5)]
+        # tied   = ['', '', '', '', 'p[1]/{0}'.format(1.00074)]
+    return guess, limits, tied
 #enddef
 
 def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
@@ -218,6 +299,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Compute S/N of emission lines
     Modified by Chun Ly, 21 March 2017
      - Revamp of code to handle multi-line fitting
+     - Call running_std() to compute running stddev for psk.Spectrum()
+     - Call parinfo() to get guesses and limits
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -324,9 +407,16 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
             cont_spec = sp.baseline.basespec # Mod on 02/03/2017
 
+            guess, limits, tied = parinfo(x0, y0, OH_flag0, z_lines,
+                                          fit_data0, in_spec)
+            print guess
+            print limits
+
             #guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
-            #sp.specfit(fittype='gaussian', guesses=guess)
-            #A = sp.specfit.parinfo # Best fit | + 02/03/2017
+            # Mod on 21/03/2017
+            sp.specfit(fittype='gaussian', guesses=guess, limits=limits)
+            A = sp.specfit.parinfo # Best fit | + 02/03/2017
+            print A
 
             a_panels = fit_data0['panels'][in_spec]
             i_panels = [idx for idx, item in enumerate(a_panels) if
@@ -343,11 +433,16 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
                 t_ax0.plot(x0, y0, 'k', linewidth=0.75, zorder=5)
                 t_ax0.plot(x0, sig0_arr, 'r--', linewidth=0.75, zorder=5)
-                t_ax0.set_xlim(xra)
 
                 in_range  = np.where((x0 >= xra[0]) & (x0 <= xra[1]))[0]
                 in_range2 = np.where((x0 >= xra[0]) & (x0 <= xra[1]) &
                                      (OH_flag0 == 0))[0]
+
+                # + on 21/03/2017
+                y_mod = sp.specfit.get_model(x0[in_range])
+                t_ax0.plot(x0[in_range], y_mod, 'r--', linewidth=1, zorder=6)
+
+                t_ax0.set_xlim(xra)
 
                 # Adjust y-range
                 t1  = np.min(y0[in_range2])
