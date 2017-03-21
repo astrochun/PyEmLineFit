@@ -31,10 +31,9 @@ from matplotlib.backends.backend_pdf import PdfPages # + on 10/02/2017
 
 import pyspeckit as psk # + on 13/02/2017
 
-sigma_sum = 2.5 # + on 01/03/2017
+from . import cols
 
-cols = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0', 'FLUX', 'FLUX_ERR',
-        'FLUX_DATA', 'NOISE', 'SNR']
+sigma_sum = 2.5 # + on 01/03/2017
 
 def draw_OH(OH_dict0, t_ax0, xra, yra, silent=True, verbose=False):
     '''

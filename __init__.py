@@ -16,6 +16,11 @@ How to use the documentation
 import PyEmLineFit as ELF
 """
 
+cols = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0', 'FLUX', 'FLUX_ERR',
+        'FLUX_DATA', 'NOISE', 'SNR']
+
+__all__ = ['cols']
+
 import read_data
 import fitting
 import execute
@@ -26,4 +31,3 @@ reload(fitting)
 reload(execute)
 reload(test)
 
-#__all__ = ['read_data']

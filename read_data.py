@@ -24,6 +24,8 @@ from astropy.table import Table
 
 import fitting
 
+from . import cols
+
 co_filename = __file__
 co_path     = os.path.dirname(co_filename) + '/'
 
@@ -123,8 +125,8 @@ def get_tagnames(init_dict0, resol='low', weak=False, silent=False,
     #    tagnames = ['AP', 'LINE', 'ZSPEC']
     #    dtype    = ['S10', 'i', 'f8']
 
-    cols    = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0',
-               'FLUX', 'FLUX_ERR', 'FLUX_DATA', 'NOISE', 'SNR']
+    # cols    = ['LAMBDA', 'ZSPEC', 'PEAK', 'SIGMA', 'Y0',
+    #           'FLUX', 'FLUX_ERR', 'FLUX_DATA', 'NOISE', 'SNR']
     c_dtype = ['f8','f8','e','f8','e','e','e','e','e','f8']
 
     if resol == 'high':
