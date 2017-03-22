@@ -179,6 +179,11 @@ def running_std(x0, y0, line_flag, OH_flag0, window=100.0):
             sig0_arr[ss] = np.std(y0[box_reg])
         else:
             sig0_arr[ss] = np.inf
+
+    # Later + on 21/03/2017 to handle zeros and inf
+    finite = np.where(np.isfinite(sig0_arr) == True)[0]
+    nan    = np.where((np.isfinite(sig0_arr) == False) | (sig0_arr == 0.0))[0]
+    sig0_arr[nan] = np.average(sig0_arr[finite])
     return sig0_arr
 #enddef
 
@@ -215,9 +220,11 @@ def parinfo(x0, y0, OH_flag0, z_lines, fit_data0, in_spec):
     Created by Chun Ly, 21 March 2017
     '''
 
-    guess  = []
-    limits = []
-    tied   = []
+    T, F = True, False
+    guess   = []
+    limits  = []
+    limited = [] # Later + on 21/03/2017
+    tied    = []
     for ss in in_spec:
         in_range2 = np.where((x0 >= z_lines[ss]-20) & (x0 <= z_lines[ss]+20) &
                              (OH_flag0 == 0))[0]
@@ -225,10 +232,11 @@ def parinfo(x0, y0, OH_flag0, z_lines, fit_data0, in_spec):
         max0 = np.max(y0[in_range2])
         if fit_data0['lines_txt'][ss] == 'OII_3726': max0 *= 0.75
 
-        guess  += [max0, z_lines[ss], 1.0]
-        limits += [(0,0), (z_lines[ss]-2,z_lines[ss]+2), (0,5)]
+        guess   += [max0, z_lines[ss], 1.0]
+        limits  += [(0,0), (z_lines[ss]-2,z_lines[ss]+2), (0,5)]
+        limited += [(T,F), (T,T), (T,T)] # Later + on 21/03/2017
         # tied   = ['', '', '', '', 'p[1]/{0}'.format(1.00074)]
-    return guess, limits, tied
+    return guess, limits, limited, tied
 #enddef
 
 def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
@@ -400,6 +408,7 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
             bl_exclude = get_bl_exclude(z_lines, OH_dict0=OH_dict0)
 
             sig0_arr = running_std(x0, y0, line_flag, OH_flag0, window=100.0)
+            print np.min(sig0_arr), np.max(sig0_arr)
             sp   = psk.Spectrum(data=y0, xarr=px, error=sig0_arr)
 
             # Perform baseline fitting | Moved up on 21/03/2017
@@ -407,14 +416,14 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
 
             cont_spec = sp.baseline.basespec # Mod on 02/03/2017
 
-            guess, limits, tied = parinfo(x0, y0, OH_flag0, z_lines,
-                                          fit_data0, in_spec)
-            print guess
-            print limits
-
+            # + on 21/03/2017
+            guess, limits, limited, tied = parinfo(x0, y0, OH_flag0, z_lines,
+                                                   fit_data0, in_spec)
+            if ll == 0: print guess, limits, limited, tied
             #guess = [np.max(y0[in_range2]), z_lines[s_idx], 1.0]
             # Mod on 21/03/2017
-            sp.specfit(fittype='gaussian', guesses=guess, limits=limits)
+            sp.specfit(fittype='gaussian', guesses=guess, limits=limits,
+                       limited=limited)
             A = sp.specfit.parinfo # Best fit | + 02/03/2017
             print A
 
