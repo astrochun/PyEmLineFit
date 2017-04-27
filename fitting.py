@@ -309,6 +309,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Revamp of code to handle multi-line fitting
      - Call running_std() to compute running stddev for psk.Spectrum()
      - Call parinfo() to get guesses and limits
+    Modified by Chun Ly, 27 April 2017
+     - Fix bug with OH_flag0 definition when OH masking is ignored
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -341,7 +343,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
         has_OH = 1
     else:
         OH_dict0 = None # + on 02/03/2017
-        OH_flag0 = np.zeros(x0, dtype=np.int8)
+        OH_flag0 = np.zeros(len(x0), dtype=np.int8) # Mod on 27/04/2017 to fix bug
+
 
     n_spec = len(data0)
     n_line = len(line) # + on 11/02/2017
