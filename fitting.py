@@ -311,6 +311,8 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
      - Call parinfo() to get guesses and limits
     Modified by Chun Ly, 27 April 2017
      - Fix bug with OH_flag0 definition when OH masking is ignored
+    Modified by Chun Ly, 30 April 2017
+     - Handle NaNs in [data0] to fix baseline fitting problems
     '''
     
     if silent == False: log.info('### Begin fitting.main: '+systime())
@@ -332,6 +334,13 @@ def main(dict0, out_pdf, out_fits, silent=False, verbose=True):
     line        = emline_data['LINE'] # + on 11/02/2017
 
     emline_cols = emline_data.colnames # + on 12/02/2017
+
+    # Fix NaNs if necessary (affects baseline fitting) | + on 30/04/2017
+    nan_idx = np.where(np.isfinite(data0) == False)
+    if len(nan_idx) > 0:
+        log.warn('## Spectra contains NaNs! Fixing!!')
+        log.warn('## Replacing '+str(len(nan_idx))+' NaNs with 0.0')
+        data0[nan_idx] = 0.0
 
     # Get OH skyline info | + on 10/02/2017
     has_OH = 0
